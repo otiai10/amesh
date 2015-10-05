@@ -2,23 +2,41 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/otiai10/amesh"
+	"github.com/otiai10/query"
 )
+
+var (
+	port = "4010"
+)
+
+func init() {
+	flag.StringVar(&port, "p", port, "port of server")
+	flag.Parse()
+}
 
 func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		ResponseJSON(w, map[string]interface{}{
-			"message": "Hello, Amesh Server",
-		})
+		ResponseJSON(w, amesh.GetEntry(), r)
 	})
-	err := http.ListenAndServe(":4010", nil)
+	err := http.ListenAndServe(fmt.Sprintf(":%s", port), nil)
 	log.Fatalln(err)
 }
 
-func ResponseJSON(w http.ResponseWriter, v interface{}) {
-	b, err := json.Marshal(v)
+// ResponseJSON ...
+func ResponseJSON(w http.ResponseWriter, v interface{}, r *http.Request) {
+	var b []byte
+	var err error
+	if query.Bool(r, "pretty", false) {
+		b, err = json.MarshalIndent(v, "", "\t")
+	} else {
+		b, err = json.Marshal(v)
+	}
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(fmt.Sprintf(`{"message":"%s"}`, err.Error())))

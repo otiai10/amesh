@@ -23,6 +23,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	gcat.OfTerminal().PrintImage(img)
-	fmt.Println("#amesh", entry.URL)
+	gcat.Terminal().Set(gcat.SimpleBorder{}).PrintImage(img)
+	fmt.Println(" #amesh", entry.URL)
 }

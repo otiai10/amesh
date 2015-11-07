@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/otiai10/amesh"
-	"github.com/otiai10/gcat"
+	"github.com/otiai10/gat"
 
 	_ "image/gif"
 )
@@ -23,6 +23,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	gcat.Terminal().Set(gcat.SimpleBorder{}).PrintImage(img)
+	gat.Terminal().Set(gat.SimpleBorder{}).PrintImage(img)
 	fmt.Println(" #amesh", entry.URL)
 }

@@ -57,7 +57,7 @@ func main() {
 		draw.Draw(base, base.Bounds(), mapLayer, image.Point{0, 0}, 0)
 	}
 
-	gat.Terminal().Set(gat.SimpleBorder{}).PrintImage(base)
+	gat.NewClient(gat.GetTerminal()).Set(gat.SimpleBorder{}).PrintImage(base)
 	fmt.Println("#amesh", entry.URL)
 }
 

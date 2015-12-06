@@ -86,6 +86,11 @@ func startDaemon() {
 	observer := amesh.NewObserver()
 
 	switch os.Getenv("AMESH_NOTIFICATION_SERVICE") {
+	case "slack":
+		observer.Notifier = amesh.NewSlackNotifier(
+			os.Getenv("AMESH_SLACK_TOKEN"),
+			os.Getenv("AMESH_SLACK_CHANNEL"),
+		)
 	case "twitter":
 		observer.Notifier = amesh.NewTwitterNotifier(
 			os.Getenv("AMESH_TWITTER_CONSUMER_KEY"),

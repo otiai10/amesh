@@ -1,7 +1,10 @@
 package amesh
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
 
 	"github.com/mrjones/oauth"
 )
@@ -13,10 +16,46 @@ type Notifier interface {
 
 // SlackNotifier ...
 type SlackNotifier struct {
+	Token   string
+	Channel string
+}
+
+// NewSlackNotifier ...
+func NewSlackNotifier(token, channel string) *SlackNotifier {
+	return &SlackNotifier{
+		Token:   token,
+		Channel: channel,
+	}
 }
 
 // Notify ...
 func (notifier *SlackNotifier) Notify(msg string) error {
+
+	query := url.Values{}
+	query.Add("token", notifier.Token)
+	query.Add("channel", notifier.Channel)
+	query.Add("as_user", "true")
+	query.Add("text", msg)
+
+	res, err := http.Get("https://slack.com/api/chat.postMessage?" + query.Encode())
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	resp := struct {
+		OK    bool   `json:"ok"`
+		Error string `json:"error"`
+	}{}
+
+	if err := json.NewDecoder(res.Body).Decode(&resp); err != nil {
+		return err
+	}
+
+	if !resp.OK {
+		return fmt.Errorf("slack said: %s", resp.Error)
+	}
+
 	return nil
 }
 

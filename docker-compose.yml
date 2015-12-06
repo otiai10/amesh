@@ -1,0 +1,6 @@
+app:
+  build: .
+  dockerfile: Dockerfile
+  env_file: develop.env
+  volumes:
+    - .:/go/src/github.com/otiai10/amesh

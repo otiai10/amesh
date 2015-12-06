@@ -5,8 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"image"
+	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/otiai10/amesh"
 	"github.com/otiai10/gat"
@@ -44,12 +46,6 @@ func init() {
 	flag.BoolVar(&geo, "g", false, "地形を描画")
 	flag.BoolVar(&mesh, "m", false, "県境を描画")
 	flag.BoolVar(&daemon, "d", false, "daemonモード起動")
-	flag.StringVar(&notifierservice, "n", "", "daemonモードの時の通知サービス [twitter|slack]")
-	flag.StringVar(&twitter.consumer.key, "tw_consumer_key", "", "-n=twitterの時必要. Twitterのコンシューマキー")
-	flag.StringVar(&twitter.consumer.secret, "tw_consumer_secret", "", "-n=twitterの時必要. Twitterのコンシューマシークレット")
-	flag.StringVar(&twitter.account.accessToken, "tw_access_token", "", "-n=twitterの時必要. Twitterアカウントのアクセストークン")
-	flag.StringVar(&twitter.account.accessTokenSecret, "tw_access_token_secret", "", "-n=twitterの時必要. Twitterアカウントのアクセストークンシークレット")
-	flag.StringVar(&twitter.target, "tw_target_acount", "", "-n=twitterの時必要. 雨がふってた時にメンションする@アカウント名")
 	flag.Parse()
 }
 
@@ -96,24 +92,28 @@ func getImage(url string) (image.Image, error) {
 }
 
 func startDaemon() {
+
 	observer := amesh.NewObserver()
 
-	var notifier amesh.Notifier
-	switch notifierservice {
+	switch os.Getenv("AMESH_NOTIFICATION_SERVICE") {
 	case "twitter":
-		notifier = amesh.NewTwitterNotifier(
-			twitter.consumer.key, twitter.consumer.secret,
-			twitter.account.accessToken, twitter.account.accessTokenSecret,
+		observer.Notifier = amesh.NewTwitterNotifier(
+			os.Getenv("AMESH_TWITTER_CONSUMER_KEY"),
+			os.Getenv("AMESH_TWITTER_CONSUMER_SECRET"),
+			os.Getenv("AMESH_TWITTER_ACCESS_TOKEN"),
+			os.Getenv("AMESH_TWITTER_ACCESS_TOKEN_SECRET"),
 		)
 	}
-	// debug
-	observer.IsRaining = func(ev amesh.Event) bool {
-		return true
-	}
+	users := strings.Split(os.Getenv("AMESH_NOTIFICATION_USERS"), ",")
+
 	observer.On(amesh.Rain, func(ev amesh.Event) {
-		if notifier != nil && twitter.target != "" {
-			// とりあえず俺
-			notifier.Notify(fmt.Sprintf("@otiai10 雨がふってるよ！\n%s", ev.Timestamp.String()))
+		msg := fmt.Sprintf("%s 雨がふってるよ！\n%s",
+			strings.Join(users, " "), ev.Timestamp.String(),
+		)
+		if observer.Notifier != nil {
+			log.Println("[RAIN NOTIFICATION]", observer.Notifier.Notify(msg))
+		} else {
+			log.Println("[RAIN]", msg)
 		}
 	})
 	observer.Start()

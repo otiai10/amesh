@@ -45,10 +45,10 @@ func NewObserver() *Observer {
 	return &Observer{
 		handlers: map[EventType]EventHandleFunc{
 			Update: func(event Event) {
-				// Set custom update handle func here.
+				log.Println("[UPDATE]", event.Timestamp)
 			},
 			Start: func(event Event) {
-				log.Println("start", event.Timestamp)
+				log.Println("[START]", event.Timestamp)
 			},
 			Error: func(event Event) {
 				panic(event)

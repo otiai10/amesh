@@ -8,7 +8,7 @@ import (
 
 const (
 	// DefaultIterationDuration ...
-	DefaultIterationDuration = 5 * time.Minute
+	DefaultIterationDuration = 3 * time.Minute
 )
 
 // DefaultOnRainHandleFunc ...

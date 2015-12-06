@@ -20,18 +20,8 @@ import (
 )
 
 var (
-	geo, mesh       bool
-	daemon          bool
-	notifierservice string
-	twitter         struct {
-		consumer struct {
-			key, secret string
-		}
-		account struct {
-			accessToken, accessTokenSecret string
-		}
-		target string
-	}
+	geo, mesh bool
+	daemon    bool
 )
 
 func onerror(err error) {

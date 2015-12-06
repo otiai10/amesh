@@ -95,8 +95,8 @@ func (observer *Observer) Restart() {
 
 func (observer *Observer) loop(onerror chan Event) {
 
-	// ticker := time.Tick(observer.IterationDuration)
-	ticker := time.Tick(2 * time.Second)
+	ticker := time.Tick(observer.IterationDuration)
+
 	for {
 		<-ticker
 		err := observer.Run()

@@ -1,4 +1,4 @@
-app:
+amesh:
   build: .
   dockerfile: Dockerfile
   env_file: develop.env

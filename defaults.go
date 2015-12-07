@@ -12,8 +12,9 @@ const (
 )
 
 // DefaultOnRainHandleFunc ...
-func DefaultOnRainHandleFunc(event Event) {
+func DefaultOnRainHandleFunc(event Event) error {
 	log.Println(fmt.Sprintf("IT'S RAINING NOW!! %v", event.Timestamp))
+	return nil
 }
 
 // DefaultIsRainingFunc ...

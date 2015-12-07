@@ -38,19 +38,21 @@ type Event struct {
 }
 
 // EventHandleFunc ...
-type EventHandleFunc func(Event)
+type EventHandleFunc func(Event) error
 
 // NewObserver ...
 func NewObserver() *Observer {
 	return &Observer{
 		handlers: map[EventType]EventHandleFunc{
-			Update: func(event Event) {
+			Update: func(event Event) error {
 				log.Println("[UPDATE]", event.Timestamp)
+				return nil
 			},
-			Start: func(event Event) {
+			Start: func(event Event) error {
 				log.Println("[START]", event.Timestamp)
+				return nil
 			},
-			Error: func(event Event) {
+			Error: func(event Event) error {
 				panic(event)
 			},
 			Rain: DefaultOnRainHandleFunc,
@@ -134,9 +136,9 @@ func (observer *Observer) Run() error {
 	}
 
 	if _, ok := observer.handlers[Rain]; ok && observer.IsRaining(event) {
-		observer.handlers[Rain](event)
+		err = observer.handlers[Rain](event)
 	} else {
-		observer.handlers[Update](event)
+		err = observer.handlers[Update](event)
 	}
 
 	return err

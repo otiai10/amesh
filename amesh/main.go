@@ -101,15 +101,15 @@ func startDaemon() {
 	}
 	users := strings.Split(os.Getenv("AMESH_NOTIFICATION_USERS"), ",")
 
-	observer.On(amesh.Rain, func(ev amesh.Event) {
+	observer.On(amesh.Rain, func(ev amesh.Event) error {
 		msg := fmt.Sprintf("%s 雨がふってるよ！\n%s %s",
 			strings.Join(users, " "), amesh.AmeshURL, ev.Timestamp.Format("15:04:05"),
 		)
 		if observer.Notifier != nil {
-			log.Println("[RAIN NOTIFICATION]", observer.Notifier.Notify(msg))
-		} else {
-			log.Println("[RAIN]", msg)
+			return observer.Notifier.Notify(msg)
 		}
+		log.Println("[RAIN]", msg)
+		return nil
 	})
 	observer.Start()
 }

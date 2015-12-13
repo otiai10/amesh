@@ -6,9 +6,10 @@ import (
 	"time"
 )
 
+// Default observer properties
 const (
-	// DefaultIterationDuration ...
-	DefaultIterationDuration = 3 * time.Minute
+	DefaultIterationDuration    = 3 * time.Minute
+	DefaultNotificationInterval = 20 * time.Minute
 )
 
 // DefaultOnRainHandleFunc ...

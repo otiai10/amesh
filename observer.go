@@ -26,12 +26,14 @@ const (
 
 // Observer ...
 type Observer struct {
-	handlers          map[EventType]EventHandleFunc
-	IterationDuration time.Duration
-	IsRaining         func(ev Event) bool
-	Notifier          Notifier
-	onerror           chan Event
-	stopper           chan Event
+	handlers             map[EventType]EventHandleFunc
+	IterationDuration    time.Duration
+	IsRaining            func(ev Event) bool
+	Notifier             Notifier
+	NotificationInterval time.Duration
+	LastRain             time.Time
+	onerror              chan Event
+	stopper              chan Event
 }
 
 // Event ...

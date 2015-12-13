@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/otiai10/amesh"
 	"github.com/otiai10/gat"
@@ -105,10 +106,16 @@ func startDaemon() {
 		msg := fmt.Sprintf("%s 雨がふってるよ！\n%s %s",
 			strings.Join(users, " "), amesh.AmeshURL, ev.Timestamp.Format("15:04:05"),
 		)
-		if observer.Notifier != nil {
+		log.Println("[RAIN]", msg)
+		if observer.LastRain.IsZero() && observer.Notifier != nil {
 			return observer.Notifier.Notify(msg)
 		}
-		log.Println("[RAIN]", msg)
+		if observer.LastRain.IsZero() {
+			observer.LastRain = ev.Timestamp // to throttle notification
+		}
+		if ev.Timestamp.After(observer.LastRain.Add(observer.NotificationInterval)) {
+			observer.LastRain = time.Time{} // reset to notify again
+		}
 		return nil
 	})
 	observer.Start()

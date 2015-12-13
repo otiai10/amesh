@@ -6,6 +6,10 @@ import (
 	"log"
 	"net/http"
 	"time"
+
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
 )
 
 // EventType ...
@@ -64,7 +68,7 @@ func NewObserver(duration ...time.Duration) *Observer {
 				return nil
 			},
 			Error: func(event Event) error {
-				panic(event)
+				panic(event.Error)
 			},
 			Rain: DefaultOnRainHandleFunc,
 		},

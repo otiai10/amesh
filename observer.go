@@ -28,6 +28,7 @@ type Observer struct {
 	IterationDuration time.Duration
 	IsRaining         func(ev Event) bool
 	Notifier          Notifier
+	onerror           chan Event
 }
 
 // Event ...
@@ -60,6 +61,7 @@ func NewObserver() *Observer {
 		IterationDuration: DefaultIterationDuration,
 		// Set custom rain judgement func here.
 		IsRaining: DefaultIsRainingFunc,
+		onerror:   make(chan Event),
 	}
 }
 
@@ -75,12 +77,10 @@ func (observer *Observer) On(eventtype EventType, fun EventHandleFunc) *Observer
 // Start ...
 func (observer *Observer) Start() {
 
-	onerror := make(chan Event)
-
 	observer.handlers[Start](Event{Timestamp: time.Now()})
-	go observer.loop(onerror)
+	go observer.loop()
 
-	ev := <-onerror
+	ev := <-observer.onerror
 	observer.handlers[Error](ev)
 }
 
@@ -89,7 +89,7 @@ func (observer *Observer) Restart() {
 	observer.Start()
 }
 
-func (observer *Observer) loop(onerror chan Event) {
+func (observer *Observer) loop() {
 
 	ticker := time.Tick(observer.IterationDuration)
 
@@ -97,7 +97,7 @@ func (observer *Observer) loop(onerror chan Event) {
 		<-ticker
 		err := observer.Run()
 		if err != nil {
-			onerror <- Event{Error: fmt.Errorf("%v", err)}
+			observer.onerror <- Event{Error: fmt.Errorf("%v", err)}
 			break
 		}
 	}

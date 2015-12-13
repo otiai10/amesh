@@ -14,6 +14,8 @@ type EventType string
 const (
 	// Start ...
 	Start EventType = "start"
+	// Stop ...
+	Stop EventType = "stop"
 	// Error ...
 	Error EventType = "error"
 	// Update ...
@@ -29,6 +31,7 @@ type Observer struct {
 	IsRaining         func(ev Event) bool
 	Notifier          Notifier
 	onerror           chan Event
+	stopper           chan Event
 }
 
 // Event ...
@@ -42,7 +45,8 @@ type Event struct {
 type EventHandleFunc func(Event) error
 
 // NewObserver ...
-func NewObserver() *Observer {
+func NewObserver(duration ...time.Duration) *Observer {
+	duration = append(duration, DefaultIterationDuration)
 	return &Observer{
 		handlers: map[EventType]EventHandleFunc{
 			Update: func(event Event) error {
@@ -53,15 +57,20 @@ func NewObserver() *Observer {
 				log.Println("[START]", event.Timestamp)
 				return nil
 			},
+			Stop: func(event Event) error {
+				log.Println("[STOP]", event.Timestamp)
+				return nil
+			},
 			Error: func(event Event) error {
 				panic(event)
 			},
 			Rain: DefaultOnRainHandleFunc,
 		},
-		IterationDuration: DefaultIterationDuration,
+		IterationDuration: duration[0],
 		// Set custom rain judgement func here.
 		IsRaining: DefaultIsRainingFunc,
 		onerror:   make(chan Event),
+		stopper:   make(chan Event),
 	}
 }
 
@@ -74,14 +83,23 @@ func (observer *Observer) On(eventtype EventType, fun EventHandleFunc) *Observer
 	return observer
 }
 
-// Start ...
+// Start never ends unless error or stop called
 func (observer *Observer) Start() {
 
 	observer.handlers[Start](Event{Timestamp: time.Now()})
 	go observer.loop()
 
-	ev := <-observer.onerror
-	observer.handlers[Error](ev)
+	select {
+	case ev := <-observer.onerror:
+		observer.handlers[Error](ev)
+	case ev := <-observer.stopper:
+		observer.handlers[Stop](ev)
+	}
+}
+
+// Stop ...
+func (observer *Observer) Stop() {
+	observer.stopper <- Event{Timestamp: time.Now()}
 }
 
 // Restart is just an alias for Start.

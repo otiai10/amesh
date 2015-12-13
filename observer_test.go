@@ -7,6 +7,8 @@ import (
 	"time"
 
 	_ "image/gif"
+
+	. "github.com/otiai10/mint"
 )
 
 func TestNewObserver(t *testing.T) {
@@ -39,4 +41,27 @@ func TestNewObserver(t *testing.T) {
 	})
 
 	observer.Start()
+
+	Expect(t, count).ToBe(7)
+}
+
+func TestObserver_Stop(t *testing.T) {
+
+	observer := NewObserver(1 * time.Second)
+	observer.IsRaining = func(ev Event) bool {
+		return false
+	}
+
+	count := 1
+	observer.On(Update, func(ev Event) error {
+		count++
+		log.Println(count)
+		return nil
+	})
+
+	go observer.Start()
+	time.Sleep(4 * time.Second)
+	observer.Stop()
+
+	Expect(t, count).ToBe(4)
 }

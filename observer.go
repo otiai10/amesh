@@ -77,17 +77,11 @@ func (observer *Observer) Start() {
 
 	onerror := make(chan Event)
 
-	go func() {
-		for {
-			select {
-			case ev := <-onerror:
-				observer.handlers[Error](ev)
-			}
-		}
-	}()
-
 	observer.handlers[Start](Event{Timestamp: time.Now()})
-	observer.loop(onerror)
+	go observer.loop(onerror)
+
+	ev := <-onerror
+	observer.handlers[Error](ev)
 }
 
 // Restart is just an alias for Start.
@@ -111,12 +105,6 @@ func (observer *Observer) loop(onerror chan Event) {
 
 // Run ...
 func (observer *Observer) Run() error {
-	var err error
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("%v", r)
-		}
-	}()
 
 	entry := GetEntry()
 	res, err := http.Get(entry.Mesh)

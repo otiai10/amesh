@@ -8,8 +8,6 @@ import (
 	"time"
 
 	_ "image/gif"
-	_ "image/jpeg"
-	_ "image/png"
 )
 
 // EventType ...
@@ -68,7 +66,9 @@ func NewObserver(duration ...time.Duration) *Observer {
 				return nil
 			},
 			Error: func(event Event) error {
-				panic(event.Error)
+				// panic(event.Error)
+				log.Println("[ERROR]", event)
+				return nil
 			},
 			Rain: DefaultOnRainHandleFunc,
 		},
@@ -95,12 +95,8 @@ func (observer *Observer) Start() {
 	observer.handlers[Start](Event{Timestamp: time.Now()})
 	go observer.loop()
 
-	select {
-	case ev := <-observer.onerror:
-		observer.handlers[Error](ev)
-	case ev := <-observer.stopper:
-		observer.handlers[Stop](ev)
-	}
+	ev := <-observer.onerror
+	observer.handlers[Error](ev)
 }
 
 // Stop ...
@@ -118,11 +114,16 @@ func (observer *Observer) loop() {
 	ticker := time.Tick(observer.IterationDuration)
 
 	for {
-		<-ticker
-		err := observer.Run()
-		if err != nil {
-			observer.onerror <- Event{Error: fmt.Errorf("%v", err)}
-			break
+		select {
+		case <-observer.stopper:
+			observer.onerror <- Event{Error: fmt.Errorf("%v", "interrupted")}
+			return
+		case <-ticker:
+			err := observer.Run()
+			if err != nil {
+				observer.onerror <- Event{Error: fmt.Errorf("%v", err)}
+				return
+			}
 		}
 	}
 }

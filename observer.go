@@ -92,7 +92,7 @@ func (observer *Observer) On(eventtype EventType, fun EventHandleFunc) *Observer
 // Start never ends unless error or stop called
 func (observer *Observer) Start() {
 
-	observer.handlers[Start](Event{Timestamp: time.Now()})
+	observer.handlers[Start](Event{Timestamp: now(nil)})
 	go observer.loop()
 
 	ev := <-observer.onerror
@@ -101,7 +101,7 @@ func (observer *Observer) Start() {
 
 // Stop ...
 func (observer *Observer) Stop() {
-	observer.stopper <- Event{Timestamp: time.Now()}
+	observer.stopper <- Event{Timestamp: now(nil)}
 }
 
 // Restart is just an alias for Start.

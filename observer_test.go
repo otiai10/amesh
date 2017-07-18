@@ -45,7 +45,7 @@ func TestNewObserver(t *testing.T) {
 
 func TestObserver_Stop(t *testing.T) {
 
-	observer := NewObserver(1 * time.Second)
+	observer := NewObserver(2 * time.Second)
 	observer.IsRaining = func(ev Event) bool {
 		return false
 	}
@@ -57,10 +57,10 @@ func TestObserver_Stop(t *testing.T) {
 	})
 
 	go observer.Start()
-	time.Sleep(4 * time.Second)
+	time.Sleep(5 * time.Second)
 	observer.Stop()
 
-	Expect(t, count).ToBe(4)
+	Expect(t, count).ToBe(3)
 }
 
 func TestObserver_NotificationInterval(t *testing.T) {

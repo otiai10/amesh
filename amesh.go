@@ -13,6 +13,8 @@ const (
 	mesh = "/mesh/000/200601021504.gif"
 	// 雨分布画像が更新される間隔
 	unit time.Duration = 5 * time.Minute
+	// アメッシュは東京だけなので
+	defaultLocation = "Asia/Tokyo"
 )
 
 // Entry ...
@@ -42,5 +44,16 @@ func getMask() string {
 }
 
 func getMesh() string {
-	return AmeshURL + time.Now().Add(-1*unit).Round(1*unit).Format(mesh)
+	return AmeshURL + now(nil).Add(-1*unit).Round(1*unit).Format(mesh)
+}
+
+func now(loc *time.Location) time.Time {
+	if loc != nil {
+		return time.Now().In(loc)
+	}
+	loc, err := time.LoadLocation(defaultLocation)
+	if err != nil {
+		return time.Now()
+	}
+	return time.Now().In(loc)
 }

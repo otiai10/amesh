@@ -40,6 +40,10 @@ func init() {
 	flag.BoolVar(&mask, "b", true, "県境を描画")
 	flag.BoolVar(&usepix, "p", false, "iTermであってもピクセル画で表示")
 	flag.BoolVar(&daemon, "d", false, "daemonモード起動")
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "東京アメッシュをCLIに表示するコマンドです。\n利用可能なオプション:\n")
+		flag.PrintDefaults()
+	}
 	flag.Parse()
 }
 

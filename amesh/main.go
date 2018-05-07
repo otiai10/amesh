@@ -2,6 +2,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/base64"
 	"flag"
 	"fmt"
 	"image"
@@ -14,14 +16,14 @@ import (
 	"github.com/otiai10/amesh"
 	"github.com/otiai10/gat"
 
-	"image/draw"
 	_ "image/gif"
 	_ "image/jpeg"
-	_ "image/png"
+	"image/png"
 )
 
 var (
-	geo, mesh bool
+	geo, mask bool
+	usepix    bool
 	daemon    bool
 )
 
@@ -34,8 +36,9 @@ func onerror(err error) {
 }
 
 func init() {
-	flag.BoolVar(&geo, "g", false, "地形を描画")
-	flag.BoolVar(&mesh, "m", false, "県境を描画")
+	flag.BoolVar(&geo, "g", true, "地形を描画")
+	flag.BoolVar(&mask, "b", true, "県境を描画")
+	flag.BoolVar(&usepix, "p", false, "iTermであってもピクセル画で表示")
 	flag.BoolVar(&daemon, "d", false, "daemonモード起動")
 	flag.Parse()
 }
@@ -49,27 +52,23 @@ func main() {
 
 	entry := amesh.GetEntry()
 
-	meshLayer, err := getImage(entry.Mesh)
+	merged, err := entry.Image(geo, mask)
 	onerror(err)
 
-	base := image.NewRGBA(meshLayer.Bounds())
-
-	if geo {
-		geoLayer, err := getImage(entry.Map)
+	switch {
+	case !usepix && os.Getenv("TERM_PROGRAM") == "iTerm.app":
+		buf := bytes.NewBuffer(nil)
+		err = png.Encode(buf, merged)
 		onerror(err)
-		draw.Draw(base, base.Bounds(), geoLayer, image.Point{0, 0}, 0)
+		size := merged.Rect.Size()
+		r := 2
+		encoded := base64.StdEncoding.EncodeToString(buf.Bytes())
+		fmt.Fprintf(os.Stdout, "\033]1337;File=;width=%dpx;height=%dpx;inline=1:%s\a\n", size.X/r, size.Y/r, encoded)
+	default:
+		gat.NewClient(gat.GetTerminal()).Set(gat.SimpleBorder{}).PrintImage(merged)
 	}
-
-	draw.Draw(base, meshLayer.Bounds(), meshLayer, image.Point{0, 0}, 0)
-
-	if mesh {
-		mapLayer, err := getImage(entry.Mask)
-		onerror(err)
-		draw.Draw(base, base.Bounds(), mapLayer, image.Point{0, 0}, 0)
-	}
-
-	gat.NewClient(gat.GetTerminal()).Set(gat.SimpleBorder{}).PrintImage(base)
 	fmt.Println("#amesh", entry.URL)
+
 }
 
 func getImage(url string) (image.Image, error) {

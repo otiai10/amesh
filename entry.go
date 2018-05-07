@@ -1,6 +1,11 @@
 package amesh
 
-import "time"
+import (
+	"image"
+	"image/draw"
+	"net/http"
+	"time"
+)
 
 const (
 	// AmeshURL は「東京アメッシュ」のURLです
@@ -56,4 +61,45 @@ func now(loc *time.Location) time.Time {
 		return time.Now()
 	}
 	return time.Now().In(loc)
+}
+
+// Image returns merged image object.
+func (entry Entry) Image(geo, mask bool) (*image.RGBA, error) {
+
+	meshlayer, err := entry.getImageFor(entry.Mesh)
+	if err != nil {
+		return nil, err
+	}
+
+	merged := image.NewRGBA(meshlayer.Bounds())
+
+	if geo {
+		geolayer, err := entry.getImageFor(entry.Map)
+		if err != nil {
+			return nil, err
+		}
+		draw.Draw(merged, geolayer.Bounds(), geolayer, image.Point{0, 0}, 0)
+	}
+
+	draw.Draw(merged, meshlayer.Bounds(), meshlayer, image.Point{0, 0}, 0)
+
+	if mask {
+		masklayer, err := entry.getImageFor(entry.Mask)
+		if err != nil {
+			return nil, err
+		}
+		draw.Draw(merged, masklayer.Bounds(), masklayer, image.Point{0, 0}, 0)
+	}
+
+	return merged, nil
+}
+
+func (entry Entry) getImageFor(imgurl string) (image.Image, error) {
+	res, err := http.Get(imgurl)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	img, _, err := image.Decode(res.Body)
+	return img, err
 }

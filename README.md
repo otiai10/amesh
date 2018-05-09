@@ -18,6 +18,15 @@ amesh
 go get github.com/otiai10/amesh/amesh
 ```
 
+なんかローカルで `go get` もしたくないしバイナリも持ちたくない、というひとがいたので謎にDockerコンテナで表示させるようにしました。
+
+```sh
+docker run -e TERM_PROGRAM --rm otiai10/amesh
+# たぶん、
+# alias amesh='docker run -e TERM_PROGRAM --rm otiai10/amesh'
+# したら幸せになれる
+```
+
 # usage
 
 ```sh

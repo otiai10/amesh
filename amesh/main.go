@@ -13,6 +13,10 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/crypto/ssh/terminal"
+
+	"github.com/mattn/go-sixel"
+	"github.com/nfnt/resize"
 	"github.com/otiai10/amesh"
 	"github.com/otiai10/gat"
 
@@ -58,16 +62,19 @@ func main() {
 
 	merged, err := entry.Image(geo, mask)
 	onerror(err)
+	size := merged.Rect.Size()
+	r := 2
 
 	switch {
 	case !usepix && os.Getenv("TERM_PROGRAM") == "iTerm.app":
 		buf := bytes.NewBuffer(nil)
 		err = png.Encode(buf, merged)
 		onerror(err)
-		size := merged.Rect.Size()
-		r := 2
 		encoded := base64.StdEncoding.EncodeToString(buf.Bytes())
 		fmt.Fprintf(os.Stdout, "\033]1337;File=;width=%dpx;height=%dpx;inline=1:%s\a\n", size.X/r, size.Y/r, encoded)
+	case sixelSupported():
+		resized := resize.Thumbnail(uint(size.X/r), uint(size.Y/r), merged, resize.Bicubic)
+		sixel.NewEncoder(os.Stdout).Encode(resized)
 	default:
 		gat.NewClient(gat.GetTerminal()).Set(gat.SimpleBorder{}).PrintImage(merged)
 	}
@@ -122,4 +129,32 @@ func startDaemon() {
 		return nil
 	})
 	observer.Start()
+}
+
+func sixelSupported() bool {
+	s, err := terminal.MakeRaw(1)
+	if err != nil {
+		return false
+	}
+	defer terminal.Restore(1, s)
+	_, err = os.Stdout.Write([]byte("\x1b[c"))
+	if err != nil {
+		return false
+	}
+	defer readTimeout(os.Stdout, time.Time{})
+
+	var b [100]byte
+	n, err := os.Stdout.Read(b[:])
+	if err != nil {
+		return false
+	}
+	if !bytes.HasPrefix(b[:n], []byte("\x1b[?63;")) {
+		return false
+	}
+	for _, t := range bytes.Split(b[4:n], []byte(";")) {
+		if len(t) == 1 && t[0] == '4' {
+			return true
+		}
+	}
+	return false
 }

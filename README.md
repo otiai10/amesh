@@ -6,9 +6,19 @@ amesh
 
 **iTermの場合**
 
+（すごい雨降ってるときの画像）
+
 ![](https://user-images.githubusercontent.com/931554/39689648-8e8520b4-5212-11e8-87e2-b0bad05f530c.png)
 
+**Sixel拡張をサポートするターミナルの場合**
+
+（晴れてるときの画像）
+
+![](https://user-images.githubusercontent.com/10111/39798686-7d505878-539c-11e8-8671-322f495824cb.png)
+
 **それ意外のターミナルアプリ**
+
+（千葉のほうだけちょっと雨降ってるときの画像）
 
 ![](https://cloud.githubusercontent.com/assets/931554/11038037/5940e5be-8744-11e5-94d9-4b0bc7b2f55f.png)
 

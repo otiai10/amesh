@@ -64,7 +64,7 @@ func Webhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := writer.WriteField("token", os.Getenv("SLACK_APP_BOT_TOKEN")); err != nil {
+	if err := writer.WriteField("token", os.Getenv("SLACK_BOT_ACCESS_TOKEN")); err != nil {
 		render.JSON(http.StatusBadRequest, map[string]interface{}{
 			"message": err.Error(),
 		})

@@ -2,6 +2,7 @@ package services
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"image/png"
@@ -9,6 +10,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/otiai10/amesh"
 	"github.com/otiai10/amesh/server/middlewares"
@@ -20,6 +22,9 @@ type Slack struct {
 	BotAccessToken string
 	Channels       string
 	Verification   string
+
+	// https://stackoverflow.com/questions/50715387/slack-events-api-triggers-multiple-times-by-one-message
+	lastEventID string
 }
 
 // Init サービスの初期化
@@ -35,57 +40,65 @@ func (slack *Slack) Init() error {
 		return fmt.Errorf("SLACK_VERIFICATION is not specified")
 	}
 
-	slack.Channels = os.Getenv("SLACK_CHANNELS")
-
 	return nil
 }
 
 // ServeHTTP ...
 func (slack *Slack) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
+	ctx, cancel := context.WithDeadline(middlewares.Context(r), time.Now().Add(60*time.Second))
+	defer cancel()
+	client := middlewares.HTTPClient(ctx)
+	log := middlewares.Log(ctx)
 	render := m.Render(w, true)
 
-	// TODO: ちゃんとstructにしたほうがいい
-	body := map[string]interface{}{}
-	if err := json.NewDecoder(r.Body).Decode(body); err != nil {
+	payload := new(Payload)
+	if err := json.NewDecoder(r.Body).Decode(payload); err != nil {
 		render.JSON(http.StatusBadRequest, m.P{
 			"message": err.Error(),
 		})
 		return
 	}
+	log.Debugf("%+v\n", payload)
 
-	if body["token"] != slack.Verification {
+	if payload.Token != slack.Verification {
 		render.JSON(http.StatusBadRequest, m.P{
 			"message": "invalid verification",
 		})
 		return
 	}
 
-	if body["type"] == "url_verification" {
+	if payload.Type == "url_verification" {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(body["challenge"].(string)))
+		w.Write([]byte(payload.Challenge))
 		return
 	}
 
-	if body["type"] != "app_mention" {
-		render.JSON(http.StatusOK, m.P{"message": fmt.Sprintf("ignore this type of events: %v", body["type"])})
+	if payload.Event.Type != "app_mention" {
+		render.JSON(http.StatusOK, m.P{"message": fmt.Sprintf("ignore this type of events: %v", payload.Event.Type)})
 		return
 	}
+
+	if payload.ID == slack.lastEventID {
+		log.Errorf("duplicated event id: %v", payload.ID)
+		w.WriteHeader(200)
+		return
+	}
+
+	// 以下の処理は時間がかかるのでもうHTTPレスポンス返しちゃいます
+	render.JSON(http.StatusOK, map[string]interface{}{})
 
 	entry := amesh.GetEntry()
-	ctx := middlewares.Context(r)
-	client := middlewares.HTTPClient(ctx)
-
 	img, err := entry.Image(true, true, client)
 	if err != nil {
-		render.JSON(http.StatusBadRequest, m.P{"message": err.Error()})
+		log.Errorf("E01: %v", err)
 		return
 	}
 
 	buf := new(bytes.Buffer)
 	if err := png.Encode(buf, img); err != nil {
-		render.JSON(http.StatusBadRequest, m.P{"message": err.Error()})
+		log.Errorf("E02: %v", err)
 		return
 	}
 
@@ -94,50 +107,68 @@ func (slack *Slack) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	f, err := writer.CreateFormFile("file", "amesh.png")
 	if err != nil {
-		render.JSON(http.StatusBadRequest, m.P{"message": err.Error()})
+		log.Errorf("E03: %v", err)
 		return
 	}
 
 	if _, err := io.Copy(f, buf); err != nil {
-		render.JSON(http.StatusBadRequest, m.P{"message": err.Error()})
+		log.Errorf("E04: %v", err)
 		return
 	}
 
 	if err := writer.WriteField("token", slack.BotAccessToken); err != nil {
-		render.JSON(http.StatusBadRequest, m.P{"message": err.Error()})
+		log.Errorf("E04: %v", err)
 		return
 	}
 
-	if err := writer.WriteField("channels", slack.Channels); err != nil {
-		render.JSON(http.StatusBadRequest, m.P{"message": err.Error()})
+	if err := writer.WriteField("channels", payload.Event.Channel); err != nil {
+		log.Errorf("E05: %v", err)
 		return
 	}
 
 	if err := writer.Close(); err != nil {
-		render.JSON(http.StatusBadRequest, m.P{"message": err.Error()})
+		log.Errorf("E06: %v", err)
 		return
 	}
 
 	req, err := http.NewRequest("POST", "https://slack.com/api/files.upload", postbody)
 	if err != nil {
-		render.JSON(http.StatusBadRequest, m.P{"message": err.Error()})
+		log.Errorf("E07: %v", err)
 		return
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 	res, err := client.Do(req)
 	if err != nil {
-		render.JSON(http.StatusBadRequest, m.P{"message": err.Error()})
+		log.Errorf("E08: %v", err)
 		return
 	}
 	if res.StatusCode != http.StatusOK {
-		render.JSON(http.StatusBadRequest, m.P{"message": fmt.Sprintf("http status is not OK: (%d) %s", res.StatusCode, res.Status)})
+		log.Errorf("E09: %v", err)
 		return
 	}
-	defer res.Body.Close()
 
 	response := map[string]interface{}{}
 	json.NewDecoder(res.Body).Decode(&response)
+	res.Body.Close()
+	log.Debugf("%+v\n", response)
+}
 
-	render.JSON(http.StatusOK, response)
+// Payload は、Events API でくるやつ、のはしょったの
+type Payload struct {
+	Token       string   `json:"token"`
+	TeamID      string   `json:"team_id"`
+	APIAppID    string   `json:"api_app_id"`
+	Type        string   `json:"type"`
+	ID          string   `json:"event_id"`
+	AuthedUsers []string `json:"authed_users"`
+	Timestamp   int64    `json:"event_time"`
+	Event       struct {
+		Type      string `json:"type"`
+		User      string `json:"user"`
+		Text      string `json:"text"`
+		Channel   string `json:"channel"`
+		Timestamp string `json:"event_ts"`
+	} `json:"event"`
+	Challenge string `json:"challenge"`
 }

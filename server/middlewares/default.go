@@ -31,3 +31,8 @@ func Log(ctx context.Context) Logger {
 func (logger Logger) Debugf(format string, v ...interface{}) {
 	log.Printf(format, v...)
 }
+
+// Errorf ...
+func (logger Logger) Errorf(format string, v ...interface{}) {
+	log.Printf(format, v...)
+}

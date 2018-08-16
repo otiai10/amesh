@@ -1,0 +1,11 @@
+version: 2
+runtime: go
+api_version: go1.9
+env: standard
+
+includes:
+- secret.yaml
+
+handlers:
+- url: /.*
+  script: _go_app

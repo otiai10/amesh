@@ -1,10 +1,15 @@
 package amesh
 
 import (
+	"fmt"
 	"image"
 	"image/draw"
 	"net/http"
 	"time"
+
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
 )
 
 const (
@@ -63,20 +68,26 @@ func now(loc *time.Location) time.Time {
 	return time.Now().In(loc)
 }
 
-// Image returns merged image object.
-func (entry Entry) Image(geo, mask bool) (*image.RGBA, error) {
+// Image fetches image data from URL and merge them if needed.
+func (entry Entry) Image(geo, mask bool, client ...*http.Client) (*image.RGBA, error) {
 
-	meshlayer, err := entry.getImageFor(entry.Mesh)
+	// If client not specified, use default HTTP client.
+	// This is because, for example, Google App Engine requires HTTP client with context.
+	if len(client) == 0 {
+		client = append(client, http.DefaultClient)
+	}
+
+	meshlayer, err := entry.getImageFor(entry.Mesh, client[0])
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get image for mesh: %v", err)
 	}
 
 	merged := image.NewRGBA(meshlayer.Bounds())
 
 	if geo {
-		geolayer, err := entry.getImageFor(entry.Map)
+		geolayer, err := entry.getImageFor(entry.Map, client[0])
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get image for geo: %v", err)
 		}
 		draw.Draw(merged, geolayer.Bounds(), geolayer, image.Point{0, 0}, 0)
 	}
@@ -84,9 +95,9 @@ func (entry Entry) Image(geo, mask bool) (*image.RGBA, error) {
 	draw.Draw(merged, meshlayer.Bounds(), meshlayer, image.Point{0, 0}, 0)
 
 	if mask {
-		masklayer, err := entry.getImageFor(entry.Mask)
+		masklayer, err := entry.getImageFor(entry.Mask, client[0])
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get image for mask: %v", err)
 		}
 		draw.Draw(merged, masklayer.Bounds(), masklayer, image.Point{0, 0}, 0)
 	}
@@ -94,8 +105,8 @@ func (entry Entry) Image(geo, mask bool) (*image.RGBA, error) {
 	return merged, nil
 }
 
-func (entry Entry) getImageFor(imgurl string) (image.Image, error) {
-	res, err := http.Get(imgurl)
+func (entry Entry) getImageFor(imgurl string, client *http.Client) (image.Image, error) {
+	res, err := client.Get(imgurl)
 	if err != nil {
 		return nil, err
 	}

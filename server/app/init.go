@@ -3,12 +3,12 @@ package app
 import (
 	"net/http"
 
-	"github.com/otiai10/amesh/server/controllers"
+	"github.com/otiai10/amesh/server/services"
 	"github.com/otiai10/marmoset"
 )
 
 func init() {
-	r := marmoset.NewRouter()
-	r.POST("/webhook", controllers.Webhook)
-	http.Handle("/", r)
+	router := marmoset.NewRouter()
+	router.POST("/webhook", services.Handler().ServeHTTP)
+	http.Handle("/", router)
 }

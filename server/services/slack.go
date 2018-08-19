@@ -1,18 +1,16 @@
 package services
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"image/png"
-	"io"
-	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
 
-	"github.com/otiai10/amesh"
+	"google.golang.org/appengine/taskqueue"
+
 	"github.com/otiai10/amesh/server/middlewares"
 	m "github.com/otiai10/marmoset"
 )
@@ -43,13 +41,16 @@ func (slack *Slack) Init() error {
 	return nil
 }
 
-// ServeHTTP ...
-func (slack *Slack) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+// WebhookURL ...
+func (slack *Slack) WebhookURL() string {
+	return "/webhook/slack"
+}
 
-	ctx, cancel := context.WithDeadline(middlewares.Context(r), time.Now().Add(60*time.Second))
+// HandleWebhook ...
+func (slack *Slack) HandleWebhook(w http.ResponseWriter, r *http.Request) {
+
+	ctx, cancel := context.WithDeadline(middlewares.Context(r), time.Now().Add(30*time.Second))
 	defer cancel()
-	client := middlewares.HTTPClient(ctx)
-	log := middlewares.Log(ctx)
 	render := m.Render(w, true)
 
 	payload := new(Payload)
@@ -59,7 +60,6 @@ func (slack *Slack) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	log.Debugf("%+v\n", payload)
 
 	if payload.Token != slack.Verification {
 		render.JSON(http.StatusBadRequest, m.P{
@@ -80,78 +80,99 @@ func (slack *Slack) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if payload.ID == slack.lastEventID {
-		log.Errorf("duplicated event id: %v", payload.ID)
-		w.WriteHeader(200)
-		return
-	}
+	t := taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{
+		"message": []string{"Hello, otiai10"},
+	})
 
-	// 以下の処理は時間がかかるのでもうHTTPレスポンス返しちゃいます
-	render.JSON(http.StatusOK, map[string]interface{}{})
-
-	entry := amesh.GetEntry()
-	img, err := entry.Image(true, true, client)
+	t, err := taskqueue.Add(ctx, t, "")
 	if err != nil {
-		log.Errorf("E01: %v", err)
+		render.JSON(http.StatusBadRequest, m.P{
+			"message": err.Error(),
+		})
 		return
 	}
+	render.JSON(http.StatusOK, map[string]interface{}{
+		"queue_name": t.Name,
+	})
 
-	buf := new(bytes.Buffer)
-	if err := png.Encode(buf, img); err != nil {
-		log.Errorf("E02: %v", err)
-		return
-	}
+}
 
-	postbody := new(bytes.Buffer)
-	writer := multipart.NewWriter(postbody)
+// QueueURL ...
+func (slack *Slack) QueueURL() string {
+	return "/queue/slack"
+}
 
-	f, err := writer.CreateFormFile("file", "amesh.png")
-	if err != nil {
-		log.Errorf("E03: %v", err)
-		return
-	}
+// HandleQueue ...
+func (slack *Slack) HandleQueue(w http.ResponseWriter, r *http.Request) {
 
-	if _, err := io.Copy(f, buf); err != nil {
-		log.Errorf("E04: %v", err)
-		return
-	}
+	render := m.Render(w, true)
+	render.JSON(http.StatusOK, m.P{
+		"message": "HandleQueue",
+	})
 
-	if err := writer.WriteField("token", slack.BotAccessToken); err != nil {
-		log.Errorf("E04: %v", err)
-		return
-	}
+	// entry := amesh.GetEntry()
+	// img, err := entry.Image(true, true, client)
+	// if err != nil {
+	// 	log.Errorf("E01: %v", err)
+	// 	return
+	// }
 
-	if err := writer.WriteField("channels", payload.Event.Channel); err != nil {
-		log.Errorf("E05: %v", err)
-		return
-	}
+	// buf := new(bytes.Buffer)
+	// if err := png.Encode(buf, img); err != nil {
+	// 	log.Errorf("E02: %v", err)
+	// 	return
+	// }
 
-	if err := writer.Close(); err != nil {
-		log.Errorf("E06: %v", err)
-		return
-	}
+	// postbody := new(bytes.Buffer)
+	// writer := multipart.NewWriter(postbody)
 
-	req, err := http.NewRequest("POST", "https://slack.com/api/files.upload", postbody)
-	if err != nil {
-		log.Errorf("E07: %v", err)
-		return
-	}
-	req.Header.Set("Content-Type", writer.FormDataContentType())
+	// f, err := writer.CreateFormFile("file", "amesh.png")
+	// if err != nil {
+	// 	log.Errorf("E03: %v", err)
+	// 	return
+	// }
 
-	res, err := client.Do(req)
-	if err != nil {
-		log.Errorf("E08: %v", err)
-		return
-	}
-	if res.StatusCode != http.StatusOK {
-		log.Errorf("E09: %v", err)
-		return
-	}
+	// if _, err := io.Copy(f, buf); err != nil {
+	// 	log.Errorf("E04: %v", err)
+	// 	return
+	// }
 
-	response := map[string]interface{}{}
-	json.NewDecoder(res.Body).Decode(&response)
-	res.Body.Close()
-	log.Debugf("%+v\n", response)
+	// if err := writer.WriteField("token", slack.BotAccessToken); err != nil {
+	// 	log.Errorf("E04: %v", err)
+	// 	return
+	// }
+
+	// if err := writer.WriteField("channels", payload.Event.Channel); err != nil {
+	// 	log.Errorf("E05: %v", err)
+	// 	return
+	// }
+
+	// if err := writer.Close(); err != nil {
+	// 	log.Errorf("E06: %v", err)
+	// 	return
+	// }
+
+	// req, err := http.NewRequest("POST", "https://slack.com/api/files.upload", postbody)
+	// if err != nil {
+	// 	log.Errorf("E07: %v", err)
+	// 	return
+	// }
+	// req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	// res, err := client.Do(req)
+	// if err != nil {
+	// 	log.Errorf("E08: %v", err)
+	// 	return
+	// }
+	// if res.StatusCode != http.StatusOK {
+	// 	log.Errorf("E09: %v", err)
+	// 	return
+	// }
+
+	// response := map[string]interface{}{}
+	// json.NewDecoder(res.Body).Decode(&response)
+	// res.Body.Close()
+	// log.Debugf("%+v\n", response)
 }
 
 // Payload は、Events API でくるやつ、のはしょったの

@@ -7,8 +7,16 @@ import (
 	"strings"
 )
 
+// Service は、Slackなど、webhookを受けたり返したりするサービスのインターフェースです。
+type Service interface {
+	WebhookURL() string
+	HandleWebhook(http.ResponseWriter, *http.Request)
+	QueueURL() string
+	HandleQueue(http.ResponseWriter, *http.Request)
+}
+
 // Handler ...
-func Handler() http.Handler {
+func Handler() Service {
 
 	name := strings.ToUpper(os.Getenv("SERVICE"))
 	switch name {

@@ -9,6 +9,10 @@ import (
 
 func init() {
 	router := marmoset.NewRouter()
-	router.POST("/webhook", services.Handler().ServeHTTP)
+
+	s := services.Handler()
+	router.POST(s.WebhookURL(), s.HandleWebhook)
+	router.POST(s.QueueURL(), s.HandleQueue)
+
 	http.Handle("/", router)
 }

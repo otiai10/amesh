@@ -1,9 +1,13 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"image/png"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
@@ -11,6 +15,7 @@ import (
 
 	"google.golang.org/appengine/taskqueue"
 
+	"github.com/otiai10/amesh"
 	"github.com/otiai10/amesh/server/middlewares"
 	m "github.com/otiai10/marmoset"
 )
@@ -20,9 +25,6 @@ type Slack struct {
 	BotAccessToken string
 	Channels       string
 	Verification   string
-
-	// https://stackoverflow.com/questions/50715387/slack-events-api-triggers-multiple-times-by-one-message
-	lastEventID string
 }
 
 // Init サービスの初期化
@@ -81,7 +83,7 @@ func (slack *Slack) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	t := taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{
-		"message": []string{"Hello, otiai10"},
+		"channels": {payload.Event.Channel},
 	})
 
 	t, err := taskqueue.Add(ctx, t, "")
@@ -91,8 +93,12 @@ func (slack *Slack) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+
+	// FIXME: とりあえず寿司
+	err = slack.postMessage(ctx, ":sushi:", payload.Event.Channel)
 	render.JSON(http.StatusOK, map[string]interface{}{
 		"queue_name": t.Name,
+		"error":      err,
 	})
 
 }
@@ -105,74 +111,117 @@ func (slack *Slack) QueueURL() string {
 // HandleQueue ...
 func (slack *Slack) HandleQueue(w http.ResponseWriter, r *http.Request) {
 
+	ctx, cancel := context.WithDeadline(middlewares.Context(r), time.Now().Add(60*time.Second))
+	defer cancel()
+	client := middlewares.HTTPClient(ctx)
+	channels := r.FormValue("channels")
+
 	render := m.Render(w, true)
-	render.JSON(http.StatusOK, m.P{
-		"message": "HandleQueue",
+
+	entry := amesh.GetEntry()
+	img, err := entry.Image(true, true, client)
+	if err != nil {
+		render.JSON(http.StatusOK, m.P{"error": slack.postMessage(ctx, err.Error(), channels)})
+		return
+	}
+
+	buf := new(bytes.Buffer)
+	if err := png.Encode(buf, img); err != nil {
+		render.JSON(http.StatusOK, m.P{"error": slack.postMessage(ctx, err.Error(), channels)})
+		return
+	}
+
+	postbody := new(bytes.Buffer)
+	writer := multipart.NewWriter(postbody)
+
+	f, err := writer.CreateFormFile("file", "amesh.png")
+	if err != nil {
+		render.JSON(http.StatusOK, m.P{"error": slack.postMessage(ctx, err.Error(), channels)})
+		return
+	}
+
+	if _, err := io.Copy(f, buf); err != nil {
+		render.JSON(http.StatusOK, m.P{"error": slack.postMessage(ctx, err.Error(), channels)})
+		return
+	}
+
+	if err := writer.WriteField("token", slack.BotAccessToken); err != nil {
+		render.JSON(http.StatusOK, m.P{"error": slack.postMessage(ctx, err.Error(), channels)})
+		return
+	}
+
+	if err := writer.WriteField("channels", channels); err != nil {
+		render.JSON(http.StatusOK, m.P{"error": slack.postMessage(ctx, err.Error(), channels)})
+		return
+	}
+
+	if err := writer.Close(); err != nil {
+		render.JSON(http.StatusOK, m.P{"error": slack.postMessage(ctx, err.Error(), channels)})
+		return
+	}
+
+	req, err := http.NewRequest("POST", "https://slack.com/api/files.upload", postbody)
+	if err != nil {
+		render.JSON(http.StatusOK, m.P{"error": slack.postMessage(ctx, err.Error(), channels)})
+		return
+	}
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	res, err := client.Do(req)
+	if err != nil {
+		render.JSON(http.StatusOK, m.P{"error": slack.postMessage(ctx, err.Error(), channels)})
+		return
+	}
+	if res.StatusCode != http.StatusOK {
+		render.JSON(http.StatusOK, m.P{"error": slack.postMessage(ctx, err.Error(), channels)})
+		return
+	}
+	defer res.Body.Close()
+
+	response := new(APIResponse)
+	if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
+		render.JSON(http.StatusOK, m.P{"error": slack.postMessage(ctx, err.Error(), channels)})
+		return
+	}
+
+	render.JSON(http.StatusOK, response)
+}
+
+func (slack *Slack) postMessage(ctx context.Context, text, channel string) error {
+	log := middlewares.Log(ctx)
+	client := middlewares.HTTPClient(ctx)
+	body := new(bytes.Buffer)
+	json.NewEncoder(body).Encode(map[string]interface{}{
+		"as_user": true,
+		"channel": channel,
+		"text":    text,
 	})
+	req, err := http.NewRequest("POST", "https://slack.com/api/chat.postMessage", body)
+	if err != nil {
+		log.Errorf("Failed to construct http request: %v", err)
+		return err
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", slack.BotAccessToken))
+	req.Header.Set("Content-Type", "application/json")
 
-	// entry := amesh.GetEntry()
-	// img, err := entry.Image(true, true, client)
-	// if err != nil {
-	// 	log.Errorf("E01: %v", err)
-	// 	return
-	// }
+	res, err := client.Do(req)
+	if err != nil {
+		log.Errorf("Failed to post message `%s`: %v", text, err)
+		return err
+	}
+	response := new(APIResponse)
+	json.NewDecoder(res.Body).Decode(response)
+	if !response.OK {
+		log.Errorf("Response from Slack is not ok: %s", response.Error)
+		return fmt.Errorf(response.Error)
+	}
+	return nil
+}
 
-	// buf := new(bytes.Buffer)
-	// if err := png.Encode(buf, img); err != nil {
-	// 	log.Errorf("E02: %v", err)
-	// 	return
-	// }
-
-	// postbody := new(bytes.Buffer)
-	// writer := multipart.NewWriter(postbody)
-
-	// f, err := writer.CreateFormFile("file", "amesh.png")
-	// if err != nil {
-	// 	log.Errorf("E03: %v", err)
-	// 	return
-	// }
-
-	// if _, err := io.Copy(f, buf); err != nil {
-	// 	log.Errorf("E04: %v", err)
-	// 	return
-	// }
-
-	// if err := writer.WriteField("token", slack.BotAccessToken); err != nil {
-	// 	log.Errorf("E04: %v", err)
-	// 	return
-	// }
-
-	// if err := writer.WriteField("channels", payload.Event.Channel); err != nil {
-	// 	log.Errorf("E05: %v", err)
-	// 	return
-	// }
-
-	// if err := writer.Close(); err != nil {
-	// 	log.Errorf("E06: %v", err)
-	// 	return
-	// }
-
-	// req, err := http.NewRequest("POST", "https://slack.com/api/files.upload", postbody)
-	// if err != nil {
-	// 	log.Errorf("E07: %v", err)
-	// 	return
-	// }
-	// req.Header.Set("Content-Type", writer.FormDataContentType())
-
-	// res, err := client.Do(req)
-	// if err != nil {
-	// 	log.Errorf("E08: %v", err)
-	// 	return
-	// }
-	// if res.StatusCode != http.StatusOK {
-	// 	log.Errorf("E09: %v", err)
-	// 	return
-	// }
-
-	// response := map[string]interface{}{}
-	// json.NewDecoder(res.Body).Decode(&response)
-	// res.Body.Close()
-	// log.Debugf("%+v\n", response)
+// APIResponse は、APIのレスポンス、のはしょったの
+type APIResponse struct {
+	OK    bool   `json:"ok"`
+	Error string `json:"error"`
 }
 
 // Payload は、Events API でくるやつ、のはしょったの

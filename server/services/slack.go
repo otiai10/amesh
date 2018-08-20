@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"image/png"
 	"io"
+	"math/rand"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -23,7 +24,6 @@ import (
 // Slack ...
 type Slack struct {
 	BotAccessToken string
-	Channels       string
 	Verification   string
 }
 
@@ -82,24 +82,27 @@ func (slack *Slack) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	t := taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{
-		"channels": {payload.Event.Channel},
+	placeholders := []string{
+		":metal:", ":sushi:", ":runner:",
+	}
+	rand.Seed(time.Now().Unix())
+	res, err := slack.postMessage(ctx, placeholders[rand.Intn(len(placeholders))], payload.Event.Channel)
+	render.JSON(http.StatusOK, map[string]interface{}{
+		"response": res,
 	})
 
-	t, err := taskqueue.Add(ctx, t, "")
+	t := taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{
+		"channel":     {payload.Event.Channel},
+		"placeholder": {res.Message.Timestamp}, // 適当に :metal: とかゆってたやつは後で消す
+	})
+
+	t, err = taskqueue.Add(ctx, t, "")
 	if err != nil {
 		render.JSON(http.StatusBadRequest, m.P{
 			"message": err.Error(),
 		})
 		return
 	}
-
-	// FIXME: とりあえず寿司
-	err = slack.postMessage(ctx, ":sushi:", payload.Event.Channel)
-	render.JSON(http.StatusOK, map[string]interface{}{
-		"queue_name": t.Name,
-		"error":      err,
-	})
 
 }
 
@@ -113,21 +116,23 @@ func (slack *Slack) HandleQueue(w http.ResponseWriter, r *http.Request) {
 
 	ctx, cancel := context.WithDeadline(middlewares.Context(r), time.Now().Add(60*time.Second))
 	defer cancel()
+	log := middlewares.Log(ctx)
 	client := middlewares.HTTPClient(ctx)
-	channels := r.FormValue("channels")
+	channel := r.FormValue("channel")
+	placeholder := r.FormValue("placeholder")
 
 	render := m.Render(w, true)
 
 	entry := amesh.GetEntry()
 	img, err := entry.Image(true, true, client)
 	if err != nil {
-		render.JSON(http.StatusOK, m.P{"error": slack.postMessage(ctx, err.Error(), channels)})
+		slack.onError(ctx, render, err, channel)
 		return
 	}
 
 	buf := new(bytes.Buffer)
 	if err := png.Encode(buf, img); err != nil {
-		render.JSON(http.StatusOK, m.P{"error": slack.postMessage(ctx, err.Error(), channels)})
+		slack.onError(ctx, render, err, channel)
 		return
 	}
 
@@ -136,58 +141,95 @@ func (slack *Slack) HandleQueue(w http.ResponseWriter, r *http.Request) {
 
 	f, err := writer.CreateFormFile("file", "amesh.png")
 	if err != nil {
-		render.JSON(http.StatusOK, m.P{"error": slack.postMessage(ctx, err.Error(), channels)})
+		slack.onError(ctx, render, err, channel)
 		return
 	}
 
 	if _, err := io.Copy(f, buf); err != nil {
-		render.JSON(http.StatusOK, m.P{"error": slack.postMessage(ctx, err.Error(), channels)})
+		slack.onError(ctx, render, err, channel)
 		return
 	}
 
 	if err := writer.WriteField("token", slack.BotAccessToken); err != nil {
-		render.JSON(http.StatusOK, m.P{"error": slack.postMessage(ctx, err.Error(), channels)})
+		slack.onError(ctx, render, err, channel)
 		return
 	}
 
-	if err := writer.WriteField("channels", channels); err != nil {
-		render.JSON(http.StatusOK, m.P{"error": slack.postMessage(ctx, err.Error(), channels)})
+	if err := writer.WriteField("channels", channel); err != nil {
+		slack.onError(ctx, render, err, channel)
 		return
 	}
 
 	if err := writer.Close(); err != nil {
-		render.JSON(http.StatusOK, m.P{"error": slack.postMessage(ctx, err.Error(), channels)})
+		slack.onError(ctx, render, err, channel)
 		return
 	}
 
 	req, err := http.NewRequest("POST", "https://slack.com/api/files.upload", postbody)
 	if err != nil {
-		render.JSON(http.StatusOK, m.P{"error": slack.postMessage(ctx, err.Error(), channels)})
+		slack.onError(ctx, render, err, channel)
 		return
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 	res, err := client.Do(req)
 	if err != nil {
-		render.JSON(http.StatusOK, m.P{"error": slack.postMessage(ctx, err.Error(), channels)})
+		slack.onError(ctx, render, err, channel)
 		return
 	}
 	if res.StatusCode != http.StatusOK {
-		render.JSON(http.StatusOK, m.P{"error": slack.postMessage(ctx, err.Error(), channels)})
+		slack.onError(ctx, render, err, channel)
 		return
 	}
 	defer res.Body.Close()
 
 	response := new(APIResponse)
 	if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
-		render.JSON(http.StatusOK, m.P{"error": slack.postMessage(ctx, err.Error(), channels)})
+		slack.onError(ctx, render, err, channel)
 		return
 	}
-
 	render.JSON(http.StatusOK, response)
+
+	// 適当に :metal: とかゆってんの消す
+	response, err = slack.deleteMessage(ctx, placeholder, channel)
+	log.Debugf("%v / %v\n", response, err)
 }
 
-func (slack *Slack) postMessage(ctx context.Context, text, channel string) error {
+func (slack *Slack) onError(ctx context.Context, render m.Renderer, err error, channel string) {
+	res, err := slack.postMessage(ctx, err.Error(), channel)
+	render.JSON(http.StatusOK, m.P{
+		"response": res,
+		"error":    err,
+	})
+}
+
+func (slack *Slack) deleteMessage(ctx context.Context, ts, channel string) (*APIResponse, error) {
+	client := middlewares.HTTPClient(ctx)
+	body := new(bytes.Buffer)
+	err := json.NewEncoder(body).Encode(map[string]interface{}{
+		"channel": channel,
+		"ts":      ts,
+		"as_user": true,
+	})
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest("POST", "https://slack.com/api/chat.delete", body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", slack.BotAccessToken))
+	req.Header.Set("Content-Type", "application/json")
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	response := new(APIResponse)
+	err = json.NewDecoder(res.Body).Decode(&response)
+	return response, err
+}
+
+func (slack *Slack) postMessage(ctx context.Context, text, channel string) (*APIResponse, error) {
 	log := middlewares.Log(ctx)
 	client := middlewares.HTTPClient(ctx)
 	body := new(bytes.Buffer)
@@ -199,7 +241,7 @@ func (slack *Slack) postMessage(ctx context.Context, text, channel string) error
 	req, err := http.NewRequest("POST", "https://slack.com/api/chat.postMessage", body)
 	if err != nil {
 		log.Errorf("Failed to construct http request: %v", err)
-		return err
+		return nil, err
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", slack.BotAccessToken))
 	req.Header.Set("Content-Type", "application/json")
@@ -207,21 +249,25 @@ func (slack *Slack) postMessage(ctx context.Context, text, channel string) error
 	res, err := client.Do(req)
 	if err != nil {
 		log.Errorf("Failed to post message `%s`: %v", text, err)
-		return err
+		return nil, err
 	}
 	response := new(APIResponse)
 	json.NewDecoder(res.Body).Decode(response)
 	if !response.OK {
 		log.Errorf("Response from Slack is not ok: %s", response.Error)
-		return fmt.Errorf(response.Error)
+		return nil, fmt.Errorf(response.Error)
 	}
-	return nil
+	return response, nil
 }
 
 // APIResponse は、APIのレスポンス、のはしょったの
 type APIResponse struct {
-	OK    bool   `json:"ok"`
-	Error string `json:"error"`
+	OK      bool   `json:"ok"`
+	Error   string `json:"error"`
+	Message struct {
+		Text      string `json:"text"`
+		Timestamp string `json:"ts"`
+	} `json:"message"`
 }
 
 // Payload は、Events API でくるやつ、のはしょったの

@@ -18,11 +18,16 @@
 
 ```yaml
 env_variables:
+
     # アメッシュ画像の投稿先にSlackを使用
     SERVICE: Slack
+
     # SLackを使用する上で必要な変数
     SLACK_BOT_ACCESS_TOKEN: xoxb-12345-67890-xxxxxxxxxxx
     SLACK_VERIFICATION: AbcDefGhiJklMnoPqrStuVwxYz
+
+    # アップロード枠の掃除のための `@amesh clean` を打つために必要
+    SLACK_USER_ACCESS_TOKEN: xoxp-12345-67890-xxxxxxxxxx
 ```
 
 # サーバのデプロイ

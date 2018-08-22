@@ -146,8 +146,11 @@ func (slack *Slack) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 	switch text {
 	case slackMethodClean: // このチャンネルに、このbotが投稿したファイルを全消しするタスク
 		t = taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{"channel": {payload.Event.Channel}, "method": {slackMethodClean}, "bot": {bot}})
-	default: // アメッシュ画像のアップロードをするタスク
+	case "": // アメッシュ画像のアップロードをするタスク
 		t = taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{"channel": {payload.Event.Channel}, "method": {slackMethodShow}})
+	default:
+		render.JSON(http.StatusOK, m.P{"accepted": false})
+		return
 	}
 
 	if _, err := taskqueue.Add(ctx, t, ""); err != nil {

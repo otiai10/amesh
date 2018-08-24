@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/otiai10/amesh/plugins/typhoon"
+
 	"github.com/otiai10/amesh"
 	"github.com/otiai10/amesh/server/middlewares"
 	m "github.com/otiai10/marmoset"
@@ -129,6 +131,28 @@ func (slack *Slack) uploadFile(ctx context.Context, file io.Reader, channel stri
 	}
 
 	return nil
+}
+
+func (slack *Slack) methodTyphoon(ctx context.Context, channel string) error {
+
+	client := middlewares.HTTPClient(ctx)
+
+	entry, err := typhoon.GetEntry(client)
+	if err != nil {
+		return err
+	}
+
+	img, err := entry.Image(client)
+	if err != nil {
+		return err
+	}
+
+	buf := new(bytes.Buffer)
+	if err := png.Encode(buf, img); err != nil {
+		return err
+	}
+
+	return slack.uploadFile(ctx, buf, channel)
 }
 
 func (slack *Slack) methodShow(ctx context.Context, channel string) error {

@@ -18,8 +18,9 @@ import (
 )
 
 const (
-	slackMethodClean = "clean"
-	slackMethodShow  = "show"
+	slackMethodClean   = "clean"
+	slackMethodTyphoon = "typhoon"
+	slackMethodShow    = "show"
 )
 
 var (
@@ -146,6 +147,8 @@ func (slack *Slack) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 	switch text {
 	case slackMethodClean: // このチャンネルに、このbotが投稿したファイルを全消しするタスク
 		t = taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{"channel": {payload.Event.Channel}, "method": {slackMethodClean}, "bot": {bot}})
+	case slackMethodTyphoon: // 台風情報を表示するタスク
+		t = taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{"channel": {payload.Event.Channel}, "method": {slackMethodTyphoon}})
 	case "": // アメッシュ画像のアップロードをするタスク
 		t = taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{"channel": {payload.Event.Channel}, "method": {slackMethodShow}})
 	default:
@@ -178,6 +181,11 @@ func (slack *Slack) HandleQueue(w http.ResponseWriter, r *http.Request) {
 	switch method {
 	case slackMethodClean:
 		if err := slack.methodClean(ctx, channel, bot); err != nil {
+			slack.onError(ctx, w, err, channel)
+			return
+		}
+	case slackMethodTyphoon:
+		if err := slack.methodTyphoon(ctx, channel); err != nil {
 			slack.onError(ctx, w, err, channel)
 			return
 		}

@@ -10,6 +10,9 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"time"
+
+	"github.com/otiai10/amesh/plugins/typhoon"
 
 	"github.com/otiai10/amesh"
 	"github.com/otiai10/amesh/server/middlewares"
@@ -129,6 +132,20 @@ func (slack *Slack) uploadFile(ctx context.Context, file io.Reader, channel stri
 	}
 
 	return nil
+}
+
+func (slack *Slack) methodTyphoon(ctx context.Context, channel string) error {
+
+	client := middlewares.HTTPClient(ctx)
+
+	entry, err := typhoon.GetEntry(client)
+	if err != nil {
+		return err
+	}
+
+	url := fmt.Sprintf("%s?%s=%d", entry.NearJP, "t", time.Now().Unix())
+	_, err = slack.postMessage(ctx, url, channel)
+	return err
 }
 
 func (slack *Slack) methodShow(ctx context.Context, channel string) error {

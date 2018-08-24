@@ -4,9 +4,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/otiai10/amesh"
+	"github.com/otiai10/amesh/plugins/typhoon"
 	"github.com/otiai10/gat/render"
 
 	_ "image/gif"
@@ -31,23 +33,40 @@ func init() {
 
 func main() {
 
-	entry := amesh.GetEntry()
-	merged, err := entry.Image(geo, mask)
-	if err != nil {
+	var renderer render.Renderer
+	switch {
+	case !usepix && render.ITermImageSupported():
+		renderer = &render.ITerm{Scale: 0.5}
+	case !usepix && render.SixelSupported():
+		renderer = &render.Sixel{Scale: 0.5}
+	default:
+		renderer = &render.CellGrid{}
+	}
+
+	onerror := func(err error) {
+		if err == nil {
+			return
+		}
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	switch {
-	case !usepix && render.ITermImageSupported():
-		iterm := &render.ITerm{Scale: 0.5}
-		iterm.Render(os.Stdout, merged)
-	case !usepix && render.SixelSupported():
-		sixel := &render.Sixel{Scale: 0.5}
-		sixel.Render(os.Stdout, merged)
+	// とりあえず
+	switch flag.Arg(0) {
+	case "typhoon":
+		entry, err := typhoon.GetEntry(http.DefaultClient)
+		onerror(err)
+		img, err := entry.Image(http.DefaultClient)
+		onerror(err)
+		renderer.Render(os.Stdout, img)
+		fmt.Println("#tenkijp", entry.Reference)
+		return
 	default:
-		cellgrid := &render.CellGrid{}
-		cellgrid.Render(os.Stdout, merged)
+		entry := amesh.GetEntry()
+		merged, err := entry.Image(geo, mask)
+		onerror(err)
+		renderer.Render(os.Stdout, merged)
+		fmt.Println("#amesh", entry.URL)
 	}
-	fmt.Println("#amesh", entry.URL)
+
 }

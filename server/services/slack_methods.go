@@ -10,6 +10,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/otiai10/amesh/plugins/typhoon"
 
@@ -142,17 +143,9 @@ func (slack *Slack) methodTyphoon(ctx context.Context, channel string) error {
 		return err
 	}
 
-	img, err := entry.Image(client)
-	if err != nil {
-		return err
-	}
-
-	buf := new(bytes.Buffer)
-	if err := png.Encode(buf, img); err != nil {
-		return err
-	}
-
-	return slack.uploadFile(ctx, buf, channel)
+	url := fmt.Sprintf("%s?%s=%d", entry.NearJP, "t", time.Now().Unix())
+	_, err = slack.postMessage(ctx, url, channel)
+	return err
 }
 
 func (slack *Slack) methodShow(ctx context.Context, channel string) error {

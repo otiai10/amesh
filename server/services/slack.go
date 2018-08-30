@@ -22,6 +22,7 @@ const (
 	slackMethodClean   = "clean"
 	slackMethodTyphoon = "typhoon"
 	slackMethodShow    = "show"
+	slackMethodDelete  = "del"
 	slackMethodImage   = "img"
 )
 
@@ -42,13 +43,22 @@ type (
 		OK    bool   `json:"ok"`
 		Error string `json:"error"`
 
-		Message struct {
-			Text      string `json:"text"`
-			Timestamp string `json:"ts"`
-		} `json:"message"`
+		Message Message `json:"message"`
 
 		// files.list のレスポンス
 		Files []*SlackFile `json:"files,omitempty"`
+
+		// channels.history のレスポンス
+		Messages []Message `json:"messages"`
+	}
+
+	// Message メッセージなどのイベント
+	Message struct {
+		Type      string `json:"type"`
+		Subtype   string `json:"subtype"`
+		User      string `json:"user"`
+		Text      string `json:"text"`
+		Timestamp string `json:"ts"`
 	}
 
 	// SlackPayload は、Events API でくるやつ、のはしょったの
@@ -157,6 +167,12 @@ func (slack *Slack) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 	case slackMethodImage: // 画像検索
 		query := strings.Join(params[1:], "+") // FIXME: []string のまま渡せないんだっけ？
 		t = taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{"channel": {payload.Event.Channel}, "method": {slackMethodImage}, "query": {query}})
+	case slackMethodDelete: // 直近発言の削除
+		count := "1"
+		if len(params) > 1 {
+			count = params[1]
+		}
+		t = taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{"channel": {payload.Event.Channel}, "method": {slackMethodDelete}, "bot": {bot}, "count": {count}})
 	case "": // アメッシュ画像のアップロードをするタスク
 		t = taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{"channel": {payload.Event.Channel}, "method": {slackMethodShow}})
 	default:
@@ -200,6 +216,11 @@ func (slack *Slack) HandleQueue(w http.ResponseWriter, r *http.Request) {
 	case slackMethodImage:
 		query := r.FormValue("query")
 		if err := slack.methodImageSearch(ctx, channel, query); err != nil {
+			slack.onError(ctx, w, err, channel)
+			return
+		}
+	case slackMethodDelete:
+		if err := slack.methodDelete(ctx, channel, bot, r.FormValue("count")); err != nil {
 			slack.onError(ctx, w, err, channel)
 			return
 		}

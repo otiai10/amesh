@@ -208,7 +208,7 @@ func (slack *Slack) deleteBotMessages(ctx context.Context, channel, bot string, 
 		}
 
 		if len(messages) == 0 {
-			return deleted, fmt.Errorf("No messages found on this channel")
+			return deleted, nil
 		}
 
 		// 次のイテレーションのために保存する

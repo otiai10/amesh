@@ -7,12 +7,14 @@ import (
 	"fmt"
 	"image/png"
 	"io"
+	"math/rand"
 	"mime/multipart"
 	"net/http"
 	"net/url"
 	"time"
 
 	"github.com/otiai10/amesh/plugins/typhoon"
+	"github.com/otiai10/chant/server/middleware/lib/google"
 
 	"github.com/otiai10/amesh"
 	"github.com/otiai10/amesh/server/middlewares"
@@ -145,6 +147,31 @@ func (slack *Slack) methodTyphoon(ctx context.Context, channel string) error {
 
 	url := fmt.Sprintf("%s?%s=%d", entry.NearJP, "t", time.Now().Unix())
 	_, err = slack.postMessage(ctx, url, channel)
+	return err
+}
+
+func (slack *Slack) methodImageSearch(ctx context.Context, channel, query string) error {
+
+	middlewares.Log(ctx).Debugf("methodImageSearch: %+v\n", query)
+	// TODO: ちょっとめんどくさいんで otiai10/chant/middleware/lib/google 呼んでますけど
+	//       これどっかにpackage分離しましょうねｗ
+	client, err := google.NewClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	rand.Seed(time.Now().Unix())
+	res, err := client.SearchImage(query, rand.Intn(10)+1)
+
+	if err != nil {
+		return err
+	}
+	if len(res.Items) == 0 {
+		_, err := slack.postMessage(ctx, "ない", channel)
+		return err
+	}
+	_, err = slack.postMessage(ctx, res.RandomItem().Link, channel)
+
 	return err
 }
 

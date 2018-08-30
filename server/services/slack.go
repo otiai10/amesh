@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"strings"
 	"time"
 
 	"google.golang.org/appengine/taskqueue"
@@ -21,6 +22,7 @@ const (
 	slackMethodClean   = "clean"
 	slackMethodTyphoon = "typhoon"
 	slackMethodShow    = "show"
+	slackMethodImage   = "img"
 )
 
 var (
@@ -139,16 +141,22 @@ func (slack *Slack) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 		render.JSON(http.StatusOK, m.P{"message": fmt.Sprintf("ignore this text `%s`", payload.Event.Text)})
 		return
 	}
+
 	bot := matches[1]
 	text := matches[2]
+	// botへの直メンション以降の部分を、paramsと呼ぶことにします
+	params := strings.Split(text, " ")
 
 	// メンションの内容から、TaskQueueの種類を変える
 	var t *taskqueue.Task
-	switch text {
+	switch params[0] {
 	case slackMethodClean: // このチャンネルに、このbotが投稿したファイルを全消しするタスク
 		t = taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{"channel": {payload.Event.Channel}, "method": {slackMethodClean}, "bot": {bot}})
 	case slackMethodTyphoon: // 台風情報を表示するタスク
 		t = taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{"channel": {payload.Event.Channel}, "method": {slackMethodTyphoon}})
+	case slackMethodImage: // 画像検索
+		query := strings.Join(params[1:], "+") // FIXME: []string のまま渡せないんだっけ？
+		t = taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{"channel": {payload.Event.Channel}, "method": {slackMethodImage}, "query": {query}})
 	case "": // アメッシュ画像のアップロードをするタスク
 		t = taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{"channel": {payload.Event.Channel}, "method": {slackMethodShow}})
 	default:
@@ -186,6 +194,12 @@ func (slack *Slack) HandleQueue(w http.ResponseWriter, r *http.Request) {
 		}
 	case slackMethodTyphoon:
 		if err := slack.methodTyphoon(ctx, channel); err != nil {
+			slack.onError(ctx, w, err, channel)
+			return
+		}
+	case slackMethodImage:
+		query := r.FormValue("query")
+		if err := slack.methodImageSearch(ctx, channel, query); err != nil {
 			slack.onError(ctx, w, err, channel)
 			return
 		}

@@ -13,9 +13,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/otiai10/amesh/plugins/typhoon"
-
-	"github.com/otiai10/amesh"
+	"github.com/otiai10/amesh/lib/amesh"
+	"github.com/otiai10/amesh/lib/typhoon"
 	"github.com/otiai10/amesh/server/middlewares"
 	m "github.com/otiai10/marmoset"
 )

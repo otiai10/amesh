@@ -15,6 +15,7 @@ import (
 	"google.golang.org/appengine/taskqueue"
 
 	"github.com/otiai10/amesh/server/middlewares"
+	"github.com/otiai10/amesh/server/plugins"
 	m "github.com/otiai10/marmoset"
 )
 
@@ -36,6 +37,8 @@ type (
 		UserAccessToken string
 		BotAccessToken  string
 		Verification    string
+
+		Plugins []plugins.Plugin
 	}
 
 	// SlackAPIResponse は、APIのレスポンス、のはしょったの
@@ -145,7 +148,6 @@ func (slack *Slack) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	middlewares.Log(ctx).Debugf("%+v\n", payload.Event)
 	matches := slackDirectMentionTextFormat.FindStringSubmatch(payload.Event.Text)
 	if len(matches) == 0 {
 		render.JSON(http.StatusOK, m.P{"message": fmt.Sprintf("ignore this text `%s`", payload.Event.Text)})
@@ -164,9 +166,6 @@ func (slack *Slack) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 		t = taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{"channel": {payload.Event.Channel}, "method": {slackMethodClean}, "bot": {bot}})
 	case slackMethodTyphoon: // 台風情報を表示するタスク
 		t = taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{"channel": {payload.Event.Channel}, "method": {slackMethodTyphoon}})
-	case slackMethodImage: // 画像検索
-		query := strings.Join(params[1:], "+") // FIXME: []string のまま渡せないんだっけ？
-		t = taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{"channel": {payload.Event.Channel}, "method": {slackMethodImage}, "query": {query}})
 	case slackMethodDelete: // 直近発言の削除
 		count := "1"
 		if len(params) > 1 {
@@ -175,7 +174,17 @@ func (slack *Slack) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 		t = taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{"channel": {payload.Event.Channel}, "method": {slackMethodDelete}, "bot": {bot}, "count": {count}})
 	case "": // アメッシュ画像のアップロードをするタスク
 		t = taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{"channel": {payload.Event.Channel}, "method": {slackMethodShow}})
-	default:
+	default: // その他、プラグインが登録されていればそちらを使う
+		for _, plugin := range slack.Plugins {
+			if plugin.Match(ctx, params) {
+				v := plugin.TaskValues(ctx, params)
+				v.Set("channel", payload.Event.Channel)
+				v.Set("bot", bot)
+				v.Set("method", plugin.Method())
+				t := taskqueue.NewPOSTTask(slack.QueueURL(), v)
+				taskqueue.Add(ctx, t, "")
+			}
+		}
 		render.JSON(http.StatusOK, m.P{"accepted": false})
 		return
 	}
@@ -213,12 +222,6 @@ func (slack *Slack) HandleQueue(w http.ResponseWriter, r *http.Request) {
 			slack.onError(ctx, w, err, channel)
 			return
 		}
-	case slackMethodImage:
-		query := r.FormValue("query")
-		if err := slack.methodImageSearch(ctx, channel, query); err != nil {
-			slack.onError(ctx, w, err, channel)
-			return
-		}
 	case slackMethodDelete:
 		if err := slack.methodDelete(ctx, channel, bot, r.FormValue("count")); err != nil {
 			slack.onError(ctx, w, err, channel)
@@ -228,6 +231,20 @@ func (slack *Slack) HandleQueue(w http.ResponseWriter, r *http.Request) {
 		if err := slack.methodShow(ctx, channel); err != nil {
 			slack.onError(ctx, w, err, channel)
 			return
+		}
+	}
+
+	for _, plugin := range slack.Plugins {
+		if method == plugin.Method() {
+			text, err := plugin.Exec(ctx, r)
+			if err != nil {
+				slack.onError(ctx, w, err, channel)
+				return
+			}
+			if _, err := slack.postMessage(ctx, text, channel); err != nil {
+				slack.onError(ctx, w, err, channel)
+				return
+			}
 		}
 	}
 

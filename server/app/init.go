@@ -14,6 +14,7 @@ func init() {
 
 	p := []plugins.Plugin{
 		plugins.Image{GoogleAPIKey: os.Getenv("GOOGLE_API_KEY"), GoogleCustomSearchEngineID: os.Getenv("GOOGLE_CUSTOM_SEARCH_ENGINE_ID")},
+		plugins.Meshi{YelpAPIKey: os.Getenv("YELP_API_KEY")},
 	}
 
 	s := services.Handler(p...)

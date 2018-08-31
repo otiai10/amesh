@@ -43,6 +43,8 @@ func (meshi Meshi) Exec(ctx context.Context, r *http.Request) (string, error) {
 	query := url.Values{}
 	location := r.FormValue("location")
 	query.Add("location", location)
+	query.Add("locale", "ja_JP")
+	query.Add("open_now", "true")
 	req, err := http.NewRequest("GET", "https://api.yelp.com/v3/businesses/search?"+query.Encode(), nil)
 	if err != nil {
 		return "", err
@@ -67,7 +69,10 @@ func (meshi Meshi) Exec(ctx context.Context, r *http.Request) (string, error) {
 	rand.Seed(time.Now().Unix())
 	business := response.Businesses[rand.Intn(len(response.Businesses))]
 
-	text := fmt.Sprintf("%s\nreview: %d, rating: %f\n%s", business.Name, business.ReviewCount, business.Rating, business.URL)
+	text := fmt.Sprintf(
+		"%s\nreview: %d, rating: %.1f\n%s\n%s",
+		business.Name, business.ReviewCount, business.Rating, business.URL, business.ImageURL,
+	)
 	return text, nil
 }
 
@@ -84,6 +89,7 @@ type (
 		Alias       string  `json:"alias"`
 		Name        string  `json:"name"`
 		URL         string  `json:"url"`
+		ImageURL    string  `json:"image_url"`
 		ReviewCount int     `json:"review_count"`
 		Rating      float32 `json:"rating"`
 	}

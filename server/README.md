@@ -30,6 +30,14 @@ env_variables:
     SLACK_USER_ACCESS_TOKEN: xoxp-12345-67890-xxxxxxxxxx
 ```
 
+# 必要な権限
+
+チャットサービスとしてSlackを使う場合、作成したアプリは以下のScopesが必要になります
+
+- `bot`: botユーザの追加や、botとしての発言を可能にするscope
+- `files:read`: botユーザが投稿したアメッシュ画像の管理に必要なscope
+- `channels:history`: botユーザが投稿した発言を取り消す場合に必要なscope
+
 # サーバのデプロイ
 
 ```sh

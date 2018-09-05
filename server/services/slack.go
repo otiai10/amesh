@@ -9,11 +9,13 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"strings"
 	"time"
 
 	"google.golang.org/appengine/taskqueue"
 
 	"github.com/otiai10/amesh/server/middlewares"
+	"github.com/otiai10/amesh/server/plugins"
 	m "github.com/otiai10/marmoset"
 )
 
@@ -21,6 +23,8 @@ const (
 	slackMethodClean   = "clean"
 	slackMethodTyphoon = "typhoon"
 	slackMethodShow    = "show"
+	slackMethodDelete  = "del"
+	slackMethodImage   = "img"
 )
 
 var (
@@ -33,6 +37,8 @@ type (
 		UserAccessToken string
 		BotAccessToken  string
 		Verification    string
+
+		Plugins []plugins.Plugin
 	}
 
 	// SlackAPIResponse は、APIのレスポンス、のはしょったの
@@ -40,13 +46,22 @@ type (
 		OK    bool   `json:"ok"`
 		Error string `json:"error"`
 
-		Message struct {
-			Text      string `json:"text"`
-			Timestamp string `json:"ts"`
-		} `json:"message"`
+		Message Message `json:"message"`
 
 		// files.list のレスポンス
 		Files []*SlackFile `json:"files,omitempty"`
+
+		// channels.history のレスポンス
+		Messages []Message `json:"messages"`
+	}
+
+	// Message メッセージなどのイベント
+	Message struct {
+		Type      string `json:"type"`
+		Subtype   string `json:"subtype"`
+		User      string `json:"user"`
+		Text      string `json:"text"`
+		Timestamp string `json:"ts"`
 	}
 
 	// SlackPayload は、Events API でくるやつ、のはしょったの
@@ -133,25 +148,43 @@ func (slack *Slack) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	middlewares.Log(ctx).Debugf("%+v\n", payload.Event)
 	matches := slackDirectMentionTextFormat.FindStringSubmatch(payload.Event.Text)
 	if len(matches) == 0 {
 		render.JSON(http.StatusOK, m.P{"message": fmt.Sprintf("ignore this text `%s`", payload.Event.Text)})
 		return
 	}
+
 	bot := matches[1]
 	text := matches[2]
+	// botへの直メンション以降の部分を、paramsと呼ぶことにします
+	params := strings.Split(text, " ")
 
 	// メンションの内容から、TaskQueueの種類を変える
 	var t *taskqueue.Task
-	switch text {
+	switch params[0] {
 	case slackMethodClean: // このチャンネルに、このbotが投稿したファイルを全消しするタスク
 		t = taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{"channel": {payload.Event.Channel}, "method": {slackMethodClean}, "bot": {bot}})
 	case slackMethodTyphoon: // 台風情報を表示するタスク
 		t = taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{"channel": {payload.Event.Channel}, "method": {slackMethodTyphoon}})
+	case slackMethodDelete: // 直近発言の削除
+		count := "1"
+		if len(params) > 1 {
+			count = params[1]
+		}
+		t = taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{"channel": {payload.Event.Channel}, "method": {slackMethodDelete}, "bot": {bot}, "count": {count}})
 	case "": // アメッシュ画像のアップロードをするタスク
 		t = taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{"channel": {payload.Event.Channel}, "method": {slackMethodShow}})
-	default:
+	default: // その他、プラグインが登録されていればそちらを使う
+		for _, plugin := range slack.Plugins {
+			if plugin.Match(ctx, params) {
+				v := plugin.TaskValues(ctx, params)
+				v.Set("channel", payload.Event.Channel)
+				v.Set("bot", bot)
+				v.Set("method", plugin.Method())
+				t := taskqueue.NewPOSTTask(slack.QueueURL(), v)
+				taskqueue.Add(ctx, t, "")
+			}
+		}
 		render.JSON(http.StatusOK, m.P{"accepted": false})
 		return
 	}
@@ -189,10 +222,29 @@ func (slack *Slack) HandleQueue(w http.ResponseWriter, r *http.Request) {
 			slack.onError(ctx, w, err, channel)
 			return
 		}
+	case slackMethodDelete:
+		if err := slack.methodDelete(ctx, channel, bot, r.FormValue("count")); err != nil {
+			slack.onError(ctx, w, err, channel)
+			return
+		}
 	case slackMethodShow:
 		if err := slack.methodShow(ctx, channel); err != nil {
 			slack.onError(ctx, w, err, channel)
 			return
+		}
+	}
+
+	for _, plugin := range slack.Plugins {
+		if method == plugin.Method() {
+			text, err := plugin.Exec(ctx, r)
+			if err != nil {
+				slack.onError(ctx, w, err, channel)
+				return
+			}
+			if _, err := slack.postMessage(ctx, text, channel); err != nil {
+				slack.onError(ctx, w, err, channel)
+				return
+			}
 		}
 	}
 

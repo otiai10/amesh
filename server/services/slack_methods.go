@@ -262,7 +262,7 @@ func (slack *Slack) methodShow(ctx context.Context, channel string) error {
 
 	client := middlewares.HTTPClient(ctx)
 
-	entry := amesh.GetEntry()
+	entry := amesh.GetEntry(time.Now())
 	img, err := entry.Image(true, true, client)
 	if err != nil {
 		return err

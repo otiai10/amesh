@@ -4,23 +4,25 @@ package main
 import (
 	"flag"
 	"fmt"
+	_ "image/gif"
+	_ "image/jpeg"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/otiai10/amesh/lib/amesh"
 	"github.com/otiai10/amesh/lib/typhoon"
 	"github.com/otiai10/gat/render"
-
-	_ "image/gif"
-	_ "image/jpeg"
 )
 
 var (
 	geo, mask bool
 	usepix    bool
+	lapse     bool
 )
 
 func init() {
+	flag.BoolVar(&lapse, "a", false, "タイムラプス表示")
 	flag.BoolVar(&geo, "g", true, "地形を描画")
 	flag.BoolVar(&mask, "b", true, "県境を描画")
 	flag.BoolVar(&usepix, "p", false, "iTermであってもピクセル画で表示")
@@ -51,6 +53,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	if lapse {
+		err := timelapse(renderer)
+		onerror(err)
+		return
+	}
+
 	// とりあえず
 	switch flag.Arg(0) {
 	case "typhoon":
@@ -62,7 +70,7 @@ func main() {
 		fmt.Println("#tenkijp", entry.Reference)
 		return
 	default:
-		entry := amesh.GetEntry()
+		entry := amesh.GetEntry(time.Now())
 		merged, err := entry.Image(geo, mask)
 		onerror(err)
 		renderer.Render(os.Stdout, merged)

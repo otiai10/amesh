@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"image"
 	"image/draw"
-	"net/http"
-	"time"
-
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
+	"net/http"
+	"time"
 )
 
 const (
@@ -29,22 +28,29 @@ const (
 
 // Entry ...
 type Entry struct {
-	URL  string `json:"url"`
-	Map  string `json:"map"`
-	Mesh string `json:"mesh"`
-	Mask string `json:"mask"`
+	URL  string    `json:"url"`
+	Map  string    `json:"map"`
+	Mesh string    `json:"mesh"`
+	Mask string    `json:"mask"`
+	Time time.Time `json:"time"`
 
 	IsRainingFunc func(image.Image) (bool, error)
 }
 
 // GetEntry ...
-func GetEntry() Entry {
+func GetEntry(t time.Time) Entry {
+	t = truncateTime(t)
 	return Entry{
 		URL:  AmeshURL,
 		Map:  getMap(),
-		Mesh: getMesh(),
+		Mesh: getMesh(t),
 		Mask: getMask(),
+		Time: t,
 	}
+}
+
+func truncateTime(t time.Time) time.Time {
+	return t.Add(-1 * unit).Round(1 * unit)
 }
 
 func getMap() string {
@@ -55,20 +61,21 @@ func getMask() string {
 	return AmeshURL + msk000
 }
 
-func getMesh() string {
-	return AmeshURL + now(nil).Add(-1*unit).Round(1*unit).Format(mesh)
+func getMesh(t time.Time) string {
+	return AmeshURL + t.Format(mesh)
 }
 
-func now(loc *time.Location) time.Time {
-	if loc != nil {
-		return time.Now().In(loc)
-	}
-	loc, err := time.LoadLocation(defaultLocation)
-	if err != nil {
-		return time.Now()
-	}
-	return time.Now().In(loc)
-}
+// // YAGNI!!
+// func now(loc *time.Location) time.Time {
+// 	if loc != nil {
+// 		return time.Now().In(loc)
+// 	}
+// 	loc, err := time.LoadLocation(defaultLocation)
+// 	if err != nil {
+// 		return time.Now()
+// 	}
+// 	return time.Now().In(loc)
+// }
 
 // Image fetches image data from URL and merge them if needed.
 func (entry Entry) Image(geo, mask bool, client ...*http.Client) (*image.RGBA, error) {

@@ -12,7 +12,7 @@ amesh
 # Install
 
 ```
-go get github.com/otiai10/amesh/amesh
+go get -u github.com/otiai10/amesh/amesh
 ```
 
 なんかローカルで `go get` もしたくないしバイナリも持ちたくない、というひとがいたので謎にDockerコンテナで表示させるようにしました。

@@ -27,10 +27,11 @@ docker run -e TERM_PROGRAM --rm otiai10/amesh
 # Usage
 
 ```sh
-amesh      #降雨状況と地形と地名・県境を表示
-amesh -g=0 #地形情報を非表示
-amesh -b=0 #地名・県境を非表示
-amesh -p   #iTermを使っててもピクセル表示
+amesh      # 降雨状況と地形と地名・県境を表示
+amesh -a   # 直近30分をタイムラプスで表示
+amesh -g=0 # 地形情報を非表示
+amesh -b=0 # 地名・県境を非表示
+amesh -p   # iTermを使っててもピクセル表示
 ```
 
 # Slackとかで @amesh って言うとアメッシュの画像出すやつ

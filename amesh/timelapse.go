@@ -26,10 +26,14 @@ func timelapse(r render.Renderer) error {
 	// まずクリアする
 	fmt.Printf("\033c")
 
+	// FIXME: カーソルを一番上に持っていく作業
+	var moveCursorToTop = func() {
+		height := 1000
+		fmt.Printf("\033[s\033[%dA\033[1;32m", height)
+	}
+
 	for _, s := range snapshots {
-		// カーソル位置を **十分** 戻す
-		// FIXME: 十分？
-		fmt.Printf("\033[s\033[32A\033[1;32m")
+		moveCursorToTop()
 		r.Render(os.Stdout, s.Image)
 		fmt.Println(s.Time.String())
 		time.Sleep(500 * time.Millisecond)

@@ -16,9 +16,11 @@ type snapshot struct {
 }
 
 // タイムラプス表示
-func timelapse(r render.Renderer) error {
+func timelapse(r render.Renderer, minutes int) error {
 
-	snapshots, err := getSnapshots(6)
+	fmt.Printf("直近%d分間の降雨画像を取得中...", minutes)
+
+	snapshots, err := getSnapshots(time.Duration(minutes) * time.Minute)
 	if err != nil {
 		return err
 	}
@@ -44,9 +46,11 @@ func timelapse(r render.Renderer) error {
 	return nil
 }
 
-func getSnapshots(length int) (snapshots []snapshot, err error) {
-	for i := 0; i < length; i++ {
-		t := time.Now().Add(time.Duration(-5*(length-i)) * time.Minute)
+func getSnapshots(dur time.Duration) (snapshots []snapshot, err error) {
+
+	sheets := int((int64(dur) / int64(5*time.Minute))) + 1
+	for i := 0; i < sheets; i++ {
+		t := time.Now().Add(time.Duration(-5*(sheets-i)) * time.Minute)
 		entry := amesh.GetEntry(t)
 		img, err := entry.Image(true, true)
 		if err != nil {

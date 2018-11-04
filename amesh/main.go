@@ -19,10 +19,12 @@ var (
 	geo, mask bool
 	usepix    bool
 	lapse     bool
+	minutes   int
 )
 
 func init() {
 	flag.BoolVar(&lapse, "a", false, "タイムラプス表示")
+	flag.IntVar(&minutes, "m", 30, "タイムラプスの取得直近時間（分）")
 	flag.BoolVar(&geo, "g", true, "地形を描画")
 	flag.BoolVar(&mask, "b", true, "県境を描画")
 	flag.BoolVar(&usepix, "p", false, "iTermであってもピクセル画で表示")
@@ -54,7 +56,7 @@ func main() {
 	}
 
 	if lapse {
-		err := timelapse(renderer)
+		err := timelapse(renderer, minutes)
 		onerror(err)
 		return
 	}

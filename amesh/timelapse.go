@@ -16,7 +16,7 @@ type snapshot struct {
 }
 
 // タイムラプス表示
-func timelapse(r render.Renderer, minutes int) error {
+func timelapse(r render.Renderer, minutes, delay int, loop bool) error {
 
 	fmt.Printf("直近%d分間の降雨画像を取得中...", minutes)
 
@@ -34,11 +34,16 @@ func timelapse(r render.Renderer, minutes int) error {
 		fmt.Printf("\033[s\033[%dA\033[1;32m", height)
 	}
 
-	for _, s := range snapshots {
+	length := len(snapshots)
+	for i := 0; true; i++ {
+		if i == length && !loop {
+			break
+		}
+		s := snapshots[i%length]
 		moveCursorToTop()
 		r.Render(os.Stdout, s.Image)
 		fmt.Println(s.Time.String())
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(time.Duration(delay) * time.Millisecond)
 	}
 
 	// TODO: カラーリングをリセットする

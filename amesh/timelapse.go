@@ -18,7 +18,7 @@ type snapshot struct {
 // タイムラプス表示
 func timelapse(r render.Renderer, minutes, delay int, loop bool) error {
 
-	fmt.Printf("直近%d分間の降雨画像を取得中...", minutes)
+	fmt.Printf("直近%d分間の降雨画像を取得中", minutes)
 
 	snapshots, err := getSnapshots(time.Duration(minutes) * time.Minute)
 	if err != nil {
@@ -62,6 +62,7 @@ func getSnapshots(dur time.Duration) (snapshots []snapshot, err error) {
 			return nil, err
 		}
 		snapshots = append(snapshots, snapshot{img, entry.Time})
+		fmt.Print(".")
 	}
 	return snapshots, nil
 }

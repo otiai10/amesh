@@ -18,11 +18,19 @@ import (
 var (
 	geo, mask bool
 	usepix    bool
-	lapse     bool
+
+	// 以下、タイムラプスでのみ有効
+	lapse   bool
+	minutes int
+	delay   int
+	loop    bool
 )
 
 func init() {
 	flag.BoolVar(&lapse, "a", false, "タイムラプス表示")
+	flag.IntVar(&minutes, "m", 40, "タイムラプスの取得直近時間（分）")
+	flag.IntVar(&delay, "d", 200, "タイムラプスアニメーションのfps（msec）")
+	flag.BoolVar(&loop, "l", false, "タイムラプスアニメーションをループ表示")
 	flag.BoolVar(&geo, "g", true, "地形を描画")
 	flag.BoolVar(&mask, "b", true, "県境を描画")
 	flag.BoolVar(&usepix, "p", false, "iTermであってもピクセル画で表示")
@@ -54,7 +62,7 @@ func main() {
 	}
 
 	if lapse {
-		err := timelapse(renderer)
+		err := timelapse(renderer, minutes, delay, loop)
 		onerror(err)
 		return
 	}

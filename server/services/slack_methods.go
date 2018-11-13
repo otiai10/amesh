@@ -262,7 +262,13 @@ func (slack *Slack) methodShow(ctx context.Context, channel string) error {
 
 	client := middlewares.HTTPClient(ctx)
 
-	entry := amesh.GetEntry(time.Now())
+	// FIXME: hardcoding
+	loc, err := time.LoadLocation("Asia/Tokyo")
+	if err != nil {
+		return err
+	}
+
+	entry := amesh.GetEntry(time.Now().In(loc))
 	img, err := entry.Image(true, true, client)
 	if err != nil {
 		return err

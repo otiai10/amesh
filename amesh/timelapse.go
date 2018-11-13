@@ -16,9 +16,11 @@ type snapshot struct {
 }
 
 // タイムラプス表示
-func timelapse(r render.Renderer) error {
+func timelapse(r render.Renderer, minutes, delay int, loop bool) error {
 
-	snapshots, err := getSnapshots(6)
+	fmt.Printf("直近%d分間の降雨画像を取得中", minutes)
+
+	snapshots, err := getSnapshots(time.Duration(minutes) * time.Minute)
 	if err != nil {
 		return err
 	}
@@ -26,13 +28,22 @@ func timelapse(r render.Renderer) error {
 	// まずクリアする
 	fmt.Printf("\033c")
 
-	for _, s := range snapshots {
-		// カーソル位置を **十分** 戻す
-		// FIXME: 十分？
-		fmt.Printf("\033[s\033[32A\033[1;32m")
+	// FIXME: カーソルを一番上に持っていく作業
+	var moveCursorToTop = func() {
+		height := 1000
+		fmt.Printf("\033[s\033[%dA\033[1;32m", height)
+	}
+
+	length := len(snapshots)
+	for i := 0; true; i++ {
+		if i == length && !loop {
+			break
+		}
+		s := snapshots[i%length]
+		moveCursorToTop()
 		r.Render(os.Stdout, s.Image)
 		fmt.Println(s.Time.String())
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(time.Duration(delay) * time.Millisecond)
 	}
 
 	// TODO: カラーリングをリセットする
@@ -40,15 +51,18 @@ func timelapse(r render.Renderer) error {
 	return nil
 }
 
-func getSnapshots(length int) (snapshots []snapshot, err error) {
-	for i := 0; i < length; i++ {
-		t := time.Now().Add(time.Duration(-5*(length-i)) * time.Minute)
+func getSnapshots(dur time.Duration) (snapshots []snapshot, err error) {
+
+	sheets := int((int64(dur) / int64(5*time.Minute))) + 1
+	for i := 0; i < sheets; i++ {
+		t := time.Now().Add(time.Duration(-5*(sheets-i)) * time.Minute)
 		entry := amesh.GetEntry(t)
 		img, err := entry.Image(true, true)
 		if err != nil {
 			return nil, err
 		}
 		snapshots = append(snapshots, snapshot{img, entry.Time})
+		fmt.Print(".")
 	}
 	return snapshots, nil
 }

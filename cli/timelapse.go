@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"fmt"
@@ -15,8 +15,8 @@ type snapshot struct {
 	Time  time.Time
 }
 
-// タイムラプス表示
-func timelapse(r render.Renderer, minutes, delay int, loop bool) error {
+// Timelapse タイムラプス表示
+func Timelapse(r render.Renderer, minutes, delay int, loop bool) error {
 
 	fmt.Printf("直近%d分間の降雨画像を取得中", minutes)
 

@@ -6,12 +6,9 @@ import (
 	"fmt"
 	_ "image/gif"
 	_ "image/jpeg"
-	"net/http"
 	"os"
-	"time"
 
-	"github.com/otiai10/amesh/lib/amesh"
-	"github.com/otiai10/amesh/lib/typhoon"
+	"github.com/otiai10/amesh/cli"
 	"github.com/otiai10/gat/render"
 )
 
@@ -42,47 +39,23 @@ func init() {
 }
 
 func main() {
-
-	var renderer render.Renderer
+	renderer := render.GetDefaultRenderer()
+	renderer.SetScale(0.5)
+	subcommand := flag.Arg(0)
 	switch {
-	case !usepix && render.ITermImageSupported():
-		renderer = &render.ITerm{Scale: 0.5}
-	case !usepix && render.SixelSupported():
-		renderer = &render.Sixel{Scale: 0.5}
+	case subcommand == "typhoon":
+		onerror(cli.Typhoon(renderer))
+	case lapse:
+		onerror(cli.Timelapse(renderer, minutes, delay, loop))
 	default:
-		renderer = &render.CellGrid{}
+		onerror(cli.Amesh(renderer, geo, mask))
 	}
+}
 
-	onerror := func(err error) {
-		if err == nil {
-			return
-		}
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	if lapse {
-		err := timelapse(renderer, minutes, delay, loop)
-		onerror(err)
+func onerror(err error) {
+	if err == nil {
 		return
 	}
-
-	// とりあえず
-	switch flag.Arg(0) {
-	case "typhoon":
-		entry, err := typhoon.GetEntry(http.DefaultClient)
-		onerror(err)
-		img, err := entry.Image(http.DefaultClient)
-		onerror(err)
-		renderer.Render(os.Stdout, img)
-		fmt.Println("#tenkijp", entry.Reference)
-		return
-	default:
-		entry := amesh.GetEntry(time.Now())
-		merged, err := entry.Image(geo, mask)
-		onerror(err)
-		renderer.Render(os.Stdout, merged)
-		fmt.Println("#amesh", entry.URL)
-	}
-
+	fmt.Println(err)
+	os.Exit(1)
 }

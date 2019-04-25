@@ -1,3 +1,4 @@
+bou.ke/monkey v1.0.1 h1:zEMLInw9xvNakzUUPjfS4Ds6jYPqCFx3m7bRmG5NH2U=
 bou.ke/monkey v1.0.1/go.mod h1:FgHuK96Rv2Nlf+0u1OOVDpCMdsWyOFmeeketDHE7LIg=
 github.com/golang/protobuf v1.2.0 h1:P3YflyNX/ehuJFLhxviNdFxQPkGK5cDcApsge1SqnvM=
 github.com/golang/protobuf v1.2.0/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
@@ -7,11 +8,15 @@ github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 h1:zYyBkD/k9seD2A7fsi6
 github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646/go.mod h1:jpp1/29i3P1S/RLdc7JQKbRpFeM1dOBd8T9ki5s+AY8=
 github.com/otiai10/chant v0.0.0-20181025063644-2735aa752660 h1:kisuS1AKtGH7+UIKKYTDpw1aiAOK3TprjzT5dcR4tHM=
 github.com/otiai10/chant v0.0.0-20181025063644-2735aa752660/go.mod h1:3vdOwedEA05C09N2EkCo+6RymMl9FQwjP7zSuofEjBQ=
+github.com/otiai10/curr v0.0.0-20150429015615-9b4961190c95/go.mod h1:9qAhocn7zKJG+0mI8eUu6xqkFDYS2kb2saOteoSB3cE=
 github.com/otiai10/gat v0.0.0-20190422041449-67c01b969755 h1:Mj/jpguqHNencRsruk40pF5wIgRGzKIOzvFZ7zTTvGQ=
 github.com/otiai10/gat v0.0.0-20190422041449-67c01b969755/go.mod h1:4KfaQUq7V21ZOGpdWaxC+djudOuhU4tvVQi8ZqrF+as=
 github.com/otiai10/marmoset v0.4.0 h1:Hg59lQI7qQowBEdsAJ/+VDTEospTBzXX/A1Gsw4mlvA=
 github.com/otiai10/marmoset v0.4.0/go.mod h1:t2q6dXWZ9YcFdRREDApX4bCmfQnL3isJ2dgl8ychlXg=
+github.com/otiai10/mint v1.2.3 h1:PsrRBmrxR68kyNu6YlqYHbNlItc5vOkuS6LBEsNttVA=
 github.com/otiai10/mint v1.2.3/go.mod h1:YnfyPNhBvnY8bW4SGQHCs/aAFhkgySlMZbrF5U0bOVw=
+github.com/otiai10/mint v1.2.4 h1:DxYL0itZyPaR5Z9HILdxSoHx+gNs6Yx+neOGS3IVUk0=
+github.com/otiai10/mint v1.2.4/go.mod h1:d+b7n/0R3tdyUYYylALXpWQ/kTN+QobSq/4SRGBkR3M=
 github.com/otiai10/opengraph v1.0.0 h1:Fal0Qx7mBWds0z2cxMMPfZh2Ld3mW61m5BBUTybajD0=
 github.com/otiai10/opengraph v1.0.0/go.mod h1:X/1XWvVWxb+8migvztlPAclxuxVCIRuLhf0xLnngZ78=
 github.com/otiai10/openweathermap v0.0.0-20181017081002-254e9d1b05a2 h1:tMm4hkiJJ8q1agp5otCZsQic0+1jH5cPMBTlN2oBepU=

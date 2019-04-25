@@ -57,11 +57,31 @@ type (
 
 	// Message メッセージなどのイベント
 	Message struct {
-		Type      string `json:"type"`
-		Subtype   string `json:"subtype"`
-		User      string `json:"user"`
-		Text      string `json:"text"`
-		Timestamp string `json:"ts"`
+		Type      string `json:"type,omitempty"`
+		Subtype   string `json:"subtype,omitempty"`
+		User      string `json:"user,omitempty"`
+		Text      string `json:"text,omitempty"`
+		Timestamp string `json:"ts,omitempty"`
+
+		// FIXME: ここから新バージョンでPOSTするときにも使うために足したもの
+		AsUser  bool    `json:"as_user,omitempty"`
+		Channel string  `json:"channel,omitempty"`
+		Blocks  []Block `json:"blocks,omitempty"`
+	}
+
+	// Block for https://api.slack.com/reference/messaging/blocks#context
+	// いまのところContext Blockを意味するが、Blockをインターフェースにするべきか
+	Block struct {
+		Type     string         `json:"type,omitempty"`
+		Elements []BlockElement `json:"elements,omitempty"`
+	}
+
+	// BlockElement ...
+	BlockElement struct {
+		Type     string `json:"type,omitemtpy"`
+		ImageURL string `json:"image_url,omitempty"`
+		AltText  string `json:"alt_text,omitempty"`
+		Text     string `json:"text,omitempty"`
 	}
 
 	// SlackPayload は、Events API でくるやつ、のはしょったの
@@ -290,6 +310,33 @@ func (slack *Slack) postMessage(ctx context.Context, text, channel string) (*Sla
 	json.NewDecoder(res.Body).Decode(response)
 	if !response.OK {
 		log.Errorf("Response from Slack is not ok: %s", response.Error)
+		return nil, fmt.Errorf(response.Error)
+	}
+	return response, nil
+}
+
+// PostMessage Slackにメッセージをポストするやつ（そのまんまやんけ）
+func (slack *Slack) PostMessage(ctx context.Context, channel string, message Message) (*SlackAPIResponse, error) {
+	message.Channel = channel
+	body := new(bytes.Buffer)
+	client := middlewares.HTTPClient(ctx)
+	if err := json.NewEncoder(body).Encode(message); err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest("POST", "https://slack.com/api/chat.postMessage", body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", slack.BotAccessToken))
+	req.Header.Set("Content-Type", "application/json")
+
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	response := new(SlackAPIResponse)
+	json.NewDecoder(res.Body).Decode(response)
+	if !response.OK {
 		return nil, fmt.Errorf(response.Error)
 	}
 	return response, nil

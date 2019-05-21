@@ -1,3 +1,4 @@
 server/app/secret.yaml
 vendor
 .vscode
+release

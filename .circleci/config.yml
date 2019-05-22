@@ -4,6 +4,8 @@ jobs:
   build:
     docker:
       - image: circleci/golang:1.12
+    environment:
+      GO111MODULE: "on"
     working_directory: /go/src/github.com/otiai10/amesh
     steps:
       - checkout
@@ -12,6 +14,8 @@ jobs:
   publish:
     docker:
       - image: circleci/golang:1.12
+    environment:
+      GO111MODULE: "on"
     working_directory: /go/src/github.com/otiai10/amesh
     steps:
       - checkout
@@ -19,6 +23,7 @@ jobs:
       - run: sudo apt-get update
       - run: sudo apt-get install jq
       - run: go get -v -t -d ./...
+      - run: go get -v -u github.com/mitchellh/gox
       - run: make clean
       - run: make
       - run: make publish

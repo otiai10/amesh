@@ -16,11 +16,9 @@ publish: $(addsuffix .log.json, $(TARGET_FILES))
 
 release/%.log.json:
 	$(eval LATEST_TAG := $(shell git tag | tail -1))
-	$(eval RELEASE_ID := $(shell curl -s https://api.github.com/repos/otiai10/amesh/releases | jq 'select(.[].tag_name == "v1.0.0") | .[].id'))
-	$(eval FILE_SIZE := $(shell stat -f%z release/$*))
+	$(eval RELEASE_ID := $(shell curl -s https://api.github.com/repos/otiai10/amesh/releases | jq 'select(.[].tag_name == "$(LATEST_TAG)") | .[].id'))
 	curl -s -X POST \
 		-H "Authorization: token $(GITHUB_ACCESS_TOKEN)" \
 		-H "Content-Type: application/zip" \
-		-H "Content-Length: $(FILE_SIZE)" \
 		--data-binary @release/$* \
 		"https://uploads.github.com/repos/otiai10/amesh/releases/$(RELEASE_ID)/assets?name=$*" >$@

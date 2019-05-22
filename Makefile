@@ -1,14 +1,13 @@
 TARGET_ARCHS=linux/amd64 darwin/amd64 windows/amd64
-TARGET_FILES=release/darwin_amd64.zip release/linux_amd64.zip release/windows_amd64.zip
+TARGET_DIRS=$(subst /,_,$(TARGET_ARCHS))
+TARGET_FILES=$(TARGET_DIRS:%=release/%.zip)
 
-all: clean build $(TARGET_FILES)
-
-build:
-	gox -output="release/{{.OS}}_{{.Arch}}/amesh" --osarch="$(TARGET_ARCHS)"
+all: $(TARGET_FILES)
 
 release/%.zip:
-	cd ./release && zip -r $*.zip $*/* && cd -
-	rm -rf release/$*
+	$(eval OSARCH := $(subst _,/,$(notdir $*)))
+	gox -output="release/{{.OS}}_{{.Arch}}/amesh" --osarch="$(OSARCH)"
+	cd ./release && zip -r $*.zip $*/* && cd ..
 
 clean:
 	rm -rf ./release/

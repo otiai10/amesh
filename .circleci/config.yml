@@ -1,0 +1,36 @@
+version: 2
+
+jobs:
+  build:
+    docker:
+      - image: circleci/golang:1.12
+    working_directory: /go/src/github.com/otiai10/amesh
+    steps:
+      - checkout
+      - run: go get -v -t -d ./...
+      - run: go test -v ./...
+  publish:
+    docker:
+      - image: circleci/golang:1.12
+    working_directory: /go/src/github.com/otiai10/amesh
+    steps:
+      - checkout
+      - run: git pull --tags
+      - run: sudo apt-get update
+      - run: sudo apt-get install jq
+      - run: go get -v -t -d ./...
+      - run: make clean
+      - run: make
+      - run: make publish
+
+workflows:
+  version: 2
+  build-and-publish:
+    jobs:
+      - build
+      - publish:
+          requires:
+            - build
+          filters:
+            tags:
+              only: /^v[0-9]+\.[0-9]+\.[0-9]$/

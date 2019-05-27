@@ -25,6 +25,7 @@ jobs:
       - run: go get -v -t -d ./...
       - run: go get -v -u github.com/mitchellh/gox
       - run: make clean
+      - run: make create_release
       - run: make
       - run: make publish
 

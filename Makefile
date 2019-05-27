@@ -12,11 +12,17 @@ release/%.zip:
 clean:
 	rm -rf ./release/
 
+create_release:
+	curl -XPOST \
+		https://api.github.com/repos/otiai10/amesh/releases \
+		-H "Content-Type: application/json" \
+		-H "Authorization: token $(GITHUB_ACCESS_TOKEN)" \
+		-d '{"tag_name": "$(CIRCLE_TAG)", "target_commitish": "$(CIRCLE_SHA1)"}'
+
 publish: $(addsuffix .log.json, $(TARGET_FILES))
 
 release/%.log.json:
-	$(eval LATEST_TAG := $(shell git tag | tail -1))
-	$(eval RELEASE_ID := $(shell curl -s https://api.github.com/repos/otiai10/amesh/releases | jq 'select(.[].tag_name == "$(LATEST_TAG)") | .[].id'))
+	$(eval RELEASE_ID := $(shell curl -s https://api.github.com/repos/otiai10/amesh/releases | jq 'select(.[].tag_name == "$(CIRCLE_TAG)") | .[].id'))
 	curl -s -X POST \
 		-H "Authorization: token $(GITHUB_ACCESS_TOKEN)" \
 		-H "Content-Type: application/zip" \

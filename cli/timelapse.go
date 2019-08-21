@@ -44,7 +44,7 @@ func Timelapse(r render.Renderer, minutes, delay int, loop bool) error {
 		time.Sleep(time.Duration(delay) * time.Millisecond)
 	}
 
-	fmt.Print("\033c")
+	fmt.Print("\033[0m")
 
 	return nil
 }

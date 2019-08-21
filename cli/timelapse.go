@@ -28,10 +28,8 @@ func Timelapse(r render.Renderer, minutes, delay int, loop bool) error {
 	// まずクリアする
 	fmt.Printf("\033c")
 
-	// FIXME: カーソルを一番上に持っていく作業
 	var moveCursorToTop = func() {
-		height := 1000
-		fmt.Printf("\033[s\033[%dA\033[1;32m", height)
+		fmt.Print("\033[s\033[H\033[1;32m")
 	}
 
 	length := len(snapshots)
@@ -46,7 +44,7 @@ func Timelapse(r render.Renderer, minutes, delay int, loop bool) error {
 		time.Sleep(time.Duration(delay) * time.Millisecond)
 	}
 
-	// TODO: カラーリングをリセットする
+	fmt.Print("\033[0m")
 
 	return nil
 }

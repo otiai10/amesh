@@ -65,18 +65,6 @@ func getMesh(t time.Time) string {
 	return AmeshURL + t.Format(mesh)
 }
 
-// // YAGNI!!
-// func now(loc *time.Location) time.Time {
-// 	if loc != nil {
-// 		return time.Now().In(loc)
-// 	}
-// 	loc, err := time.LoadLocation(defaultLocation)
-// 	if err != nil {
-// 		return time.Now()
-// 	}
-// 	return time.Now().In(loc)
-// }
-
 // Image fetches image data from URL and merge them if needed.
 func (entry Entry) Image(geo, mask bool, client ...*http.Client) (*image.RGBA, error) {
 

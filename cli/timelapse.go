@@ -51,9 +51,14 @@ func Timelapse(r render.Renderer, minutes, delay int, loop bool) error {
 
 func getSnapshots(dur time.Duration) (snapshots []snapshot, err error) {
 
+	now, err := getNow()
+	if err != nil {
+		return nil, err
+	}
+
 	sheets := int((int64(dur) / int64(5*time.Minute))) + 1
 	for i := 0; i < sheets; i++ {
-		t := time.Now().Add(time.Duration(-5*(sheets-i)) * time.Minute)
+		t := now.Add(time.Duration(-5*(sheets-i)) * time.Minute)
 		entry := amesh.GetEntry(t)
 		img, err := entry.Image(true, true)
 		if err != nil {

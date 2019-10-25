@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/otiai10/amesh/lib/amesh"
 	"github.com/otiai10/gat/render"
@@ -11,7 +10,13 @@ import (
 
 // Amesh デフォルトのアメッシュを表示
 func Amesh(r render.Renderer, geo, mask bool) error {
-	entry := amesh.GetEntry(time.Now())
+
+	now, err := getNow()
+	if err != nil {
+		return err
+	}
+
+	entry := amesh.GetEntry(now)
 	merged, err := entry.Image(geo, mask)
 	if err != nil {
 		return err

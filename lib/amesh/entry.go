@@ -120,6 +120,9 @@ func (entry Entry) getImageFor(imgurl string, client *http.Client) (image.Image,
 		return nil, err
 	}
 	defer res.Body.Close()
+	if res.StatusCode >= 400 {
+		return nil, fmt.Errorf(res.Status)
+	}
 	img, _, err := image.Decode(res.Body)
 	return img, err
 }

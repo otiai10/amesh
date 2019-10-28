@@ -7,7 +7,8 @@ all: $(TARGET_FILES)
 release/%.zip:
 	$(eval OSARCH := $(subst _,/,$(notdir $*)))
 	gox -output="release/{{.OS}}_{{.Arch}}/amesh" --osarch="$(OSARCH)"
-	cd ./release && zip -r $*.zip $*/* && cd ..
+	mkdir -p release/zip/
+	cd ./release/$* && zip ../zip/$*.zip amesh* && cd ../../
 
 clean:
 	rm -rf ./release/

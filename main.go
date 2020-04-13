@@ -15,6 +15,7 @@ import (
 var (
 	geo, mask bool
 	usepix    bool
+	scale     float64
 
 	// 以下、タイムラプスでのみ有効
 	lapse   bool
@@ -31,6 +32,7 @@ func init() {
 	flag.BoolVar(&geo, "g", true, "地形を描画")
 	flag.BoolVar(&mask, "b", true, "県境を描画")
 	flag.BoolVar(&usepix, "p", false, "iTermであってもピクセル画で表示")
+	flag.Float64Var(&scale, "s", 0.8, "表示拡大倍率")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "東京アメッシュをCLIに表示するコマンドです。\n利用可能なオプション:\n")
 		flag.PrintDefaults()
@@ -40,7 +42,7 @@ func init() {
 
 func main() {
 	renderer := render.GetDefaultRenderer()
-	renderer.SetScale(0.5)
+	renderer.SetScale(scale)
 	subcommand := flag.Arg(0)
 	switch {
 	case subcommand == "typhoon":

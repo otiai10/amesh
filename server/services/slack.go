@@ -6,13 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"os"
 	"regexp"
-	"strings"
 	"time"
-
-	"google.golang.org/appengine/taskqueue"
 
 	"github.com/otiai10/amesh/server/middlewares"
 	"github.com/otiai10/amesh/server/plugins"
@@ -137,7 +133,8 @@ func (slack *Slack) WebhookURL() string {
 // HandleWebhook ...
 func (slack *Slack) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 
-	ctx, cancel := context.WithDeadline(middlewares.Context(r), time.Now().Add(30*time.Second))
+	// ctx, cancel := context.WithDeadline(middlewares.Context(r), time.Now().Add(30*time.Second))
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(30*time.Second))
 	defer cancel()
 	render := m.Render(w, true)
 
@@ -174,45 +171,50 @@ func (slack *Slack) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	bot := matches[1]
+	// bot := matches[1]
 	text := matches[2]
-	// botへの直メンション以降の部分を、paramsと呼ぶことにします
-	params := strings.Split(text, " ")
 
-	// メンションの内容から、TaskQueueの種類を変える
-	var t *taskqueue.Task
-	switch params[0] {
-	case slackMethodClean: // このチャンネルに、このbotが投稿したファイルを全消しするタスク
-		t = taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{"channel": {payload.Event.Channel}, "method": {slackMethodClean}, "bot": {bot}})
-	case slackMethodTyphoon: // 台風情報を表示するタスク
-		t = taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{"channel": {payload.Event.Channel}, "method": {slackMethodTyphoon}})
-	case slackMethodDelete: // 直近発言の削除
-		count := "1"
-		if len(params) > 1 {
-			count = params[1]
-		}
-		t = taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{"channel": {payload.Event.Channel}, "method": {slackMethodDelete}, "bot": {bot}, "count": {count}})
-	case "": // アメッシュ画像のアップロードをするタスク
-		t = taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{"channel": {payload.Event.Channel}, "method": {slackMethodShow}})
-	default: // その他、プラグインが登録されていればそちらを使う
-		for _, plugin := range slack.Plugins {
-			if plugin.Match(ctx, params) {
-				v := plugin.TaskValues(ctx, params)
-				v.Set("channel", payload.Event.Channel)
-				v.Set("bot", bot)
-				v.Set("method", plugin.Method())
-				t := taskqueue.NewPOSTTask(slack.QueueURL(), v)
-				taskqueue.Add(ctx, t, "")
-			}
-		}
-		render.JSON(http.StatusOK, m.P{"accepted": false})
-		return
-	}
+	// {{{ FIXME: とりあえずameshだけ
+	slack.methodShow(ctx, payload.Event.Channel)
+	// }}}
 
-	if _, err := taskqueue.Add(ctx, t, ""); err != nil {
-		slack.onError(ctx, w, err, payload.Event.Channel)
-		return
-	}
+	// // botへの直メンション以降の部分を、paramsと呼ぶことにします
+	// params := strings.Split(text, " ")
+
+	// // メンションの内容から、TaskQueueの種類を変える
+	// var t *taskqueue.Task
+	// switch params[0] {
+	// case slackMethodClean: // このチャンネルに、このbotが投稿したファイルを全消しするタスク
+	// 	t = taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{"channel": {payload.Event.Channel}, "method": {slackMethodClean}, "bot": {bot}})
+	// case slackMethodTyphoon: // 台風情報を表示するタスク
+	// 	t = taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{"channel": {payload.Event.Channel}, "method": {slackMethodTyphoon}})
+	// case slackMethodDelete: // 直近発言の削除
+	// 	count := "1"
+	// 	if len(params) > 1 {
+	// 		count = params[1]
+	// 	}
+	// 	t = taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{"channel": {payload.Event.Channel}, "method": {slackMethodDelete}, "bot": {bot}, "count": {count}})
+	// case "": // アメッシュ画像のアップロードをするタスク
+	// 	t = taskqueue.NewPOSTTask(slack.QueueURL(), url.Values{"channel": {payload.Event.Channel}, "method": {slackMethodShow}})
+	// default: // その他、プラグインが登録されていればそちらを使う
+	// 	for _, plugin := range slack.Plugins {
+	// 		if plugin.Match(ctx, params) {
+	// 			v := plugin.TaskValues(ctx, params)
+	// 			v.Set("channel", payload.Event.Channel)
+	// 			v.Set("bot", bot)
+	// 			v.Set("method", plugin.Method())
+	// 			t := taskqueue.NewPOSTTask(slack.QueueURL(), v)
+	// 			taskqueue.Add(ctx, t, "")
+	// 		}
+	// 	}
+	// 	render.JSON(http.StatusOK, m.P{"accepted": false})
+	// 	return
+	// }
+
+	// if _, err := taskqueue.Add(ctx, t, ""); err != nil {
+	// 	slack.onError(ctx, w, err, payload.Event.Channel)
+	// 	return
+	// }
 	render.JSON(http.StatusOK, m.P{"accepted": true, "text": text})
 }
 

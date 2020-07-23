@@ -1,42 +1,44 @@
-// +build appengine
-
 package middlewares
 
-import (
-	"context"
-	"net/http"
+/**
+ * AppEngineのcontextのwrapperだったけど、go1.9->go1.12への以降にともなってもはや必要ない？
+**/
 
-	"google.golang.org/appengine"
-	"google.golang.org/appengine/log"
-	"google.golang.org/appengine/urlfetch"
-)
+// import (
+// 	"context"
+// 	"net/http"
 
-// Context ...
-func Context(r *http.Request) context.Context {
-	return appengine.NewContext(r)
-}
+// 	"google.golang.org/appengine"
+// 	"google.golang.org/appengine/log"
+// 	"google.golang.org/appengine/urlfetch"
+// )
 
-// HTTPClient ...
-func HTTPClient(ctx context.Context) *http.Client {
-	return urlfetch.Client(ctx)
-}
+// // Context ...
+// func Context(r *http.Request) context.Context {
+// 	return appengine.NewContext(r)
+// }
 
-// Logger ...
-type Logger struct {
-	ctx context.Context
-}
+// // HTTPClient ...
+// func HTTPClient(ctx context.Context) *http.Client {
+// 	return urlfetch.Client(ctx)
+// }
 
-// Log ...
-func Log(ctx context.Context) Logger {
-	return Logger{ctx}
-}
+// // Logger ...
+// type Logger struct {
+// 	ctx context.Context
+// }
 
-// Debugf ...
-func (logger Logger) Debugf(format string, v ...interface{}) {
-	log.Debugf(logger.ctx, format, v...)
-}
+// // Log ...
+// func Log(ctx context.Context) Logger {
+// 	return Logger{ctx}
+// }
 
-// Errorf ...
-func (logger Logger) Errorf(format string, v ...interface{}) {
-	log.Errorf(logger.ctx, format, v...)
-}
+// // Debugf ...
+// func (logger Logger) Debugf(format string, v ...interface{}) {
+// 	log.Debugf(logger.ctx, format, v...)
+// }
+
+// // Errorf ...
+// func (logger Logger) Errorf(format string, v ...interface{}) {
+// 	log.Errorf(logger.ctx, format, v...)
+// }

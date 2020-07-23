@@ -1,14 +1,9 @@
-version: 2
-runtime: go
-api_version: go1.9
+runtime: go112
 env: standard
 
 includes:
 - secret.yaml
 
 handlers:
-- url: /queue/.*
-  script: _go_app
-  login: admin
 - url: /.*
-  script: _go_app
+  script: auto

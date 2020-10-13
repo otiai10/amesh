@@ -1,6 +1,8 @@
 amesh
 ==========
 
+[![Actions Status](https://github.com/otiai10/amesh/workflows/Go/badge.svg)](https://github.com/otiai10/amesh/actions)
+
 みんな大好き東京アメッシュ http://tokyo-ame.jwa.or.jp/
 をCLIで表示
 

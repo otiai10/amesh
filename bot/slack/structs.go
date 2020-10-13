@@ -27,3 +27,11 @@ type Block struct {
 	ImageURL string `json:"image_url"`
 	AltText  string `json:"alt_text"`
 }
+
+// Message ...
+type Message struct {
+	Channel string `json:"channel"`
+	Text    string `json:"text,omitempty"`
+	// https://api.slack.com/messaging/composing/layouts#sending-messages
+	Blocks []Block `json:"blocks,omitempty"`
+}

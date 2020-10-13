@@ -34,8 +34,8 @@ amesh -b=0 # 地名・県境を非表示
 amesh -p   # iTermを使っててもピクセル表示
 ```
 
-# Slackとかで @amesh って言うとアメッシュの画像出すやつ
+# Slackで @amesh って言うとアメッシュの画像出すbot
 
 <img width="40%" src="https://user-images.githubusercontent.com/931554/44345661-e5c65a00-a4ce-11e8-96a3-a024b8651183.png" >
 
-詳しくは、 https://github.com/otiai10/amesh/tree/master/server
+詳しくは、 https://github.com/otiai10/amesh/tree/main/bot

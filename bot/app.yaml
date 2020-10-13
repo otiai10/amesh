@@ -2,7 +2,7 @@ runtime: go112
 env: standard
 
 includes:
-- secret.yaml
+- app-secrets.yaml
 
 handlers:
 - url: /.*

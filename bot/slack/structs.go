@@ -23,9 +23,18 @@ type Payload struct {
 
 // Block ...
 type Block struct {
-	Type     string `json:"type"`
-	ImageURL string `json:"image_url"`
-	AltText  string `json:"alt_text"`
+	Type     string    `json:"type"`
+	ImageURL string    `json:"image_url,omitempty"`
+	AltText  string    `json:"alt_text,omitempty"`
+	Elements []Element `json:"elements,omitempty"`
+}
+
+// Element ...
+type Element struct {
+	Type     string `json:"type,omitempty"`
+	ImageURL string `json:"image_url,omitempty"`
+	AltText  string `json:"alt_text,omitempty"`
+	Text     string `json:"text,omitempty"`
 }
 
 // Message ...

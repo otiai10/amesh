@@ -59,12 +59,15 @@ func createResponseMessage(ctx context.Context, payload *Payload) Message {
 
 	command := words[0]
 
-	if command == "予報" {
+	switch command {
+	case "予報", "forecast":
 		return forecast(ctx, payload)
-	}
-
-	return Message{
-		Channel: payload.Event.Channel,
-		Text:    fmt.Sprintf("ちょっと何言ってるかわからない\n> %v", words),
+	case "画像", "img", "image":
+		return searchImage(ctx, payload)
+	default:
+		return Message{
+			Channel: payload.Event.Channel,
+			Text:    fmt.Sprintf("ちょっと何言ってるかわからない\n> %v", words),
+		}
 	}
 }

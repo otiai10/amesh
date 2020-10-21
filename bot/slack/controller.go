@@ -42,32 +42,36 @@ func HandleWebhook(w http.ResponseWriter, r *http.Request) {
 	// https://api.slack.com/events-api#the-events-api__responding-to-events
 	render.JSON(http.StatusAccepted, marmoset.P{"message": "ok"})
 
-	message := createResponseMessage(context.Background(), payload)
-	if err := postMessage(message); err != nil {
-		log.Fatalln(err)
-	}
+	go handle(context.Background(), payload)
 
 	return
 }
 
+func handle(ctx context.Context, payload *Payload) {
+	message := createResponseMessage(context.Background(), payload)
+	if err := postMessage(message); err != nil {
+		log.Fatalln(err)
+	}
+}
+
 func createResponseMessage(ctx context.Context, payload *Payload) Message {
 
-	words := spell.Parse(payload.Event.Text)[1:]
-	if len(words) == 0 {
-		return ame(ctx, payload)
+	payload.Ext.Words = spell.Parse(payload.Event.Text)[1:]
+
+	commands := []Command{
+		AmeshCommand{},
+		ImageCommand{},
+		ForecastCommand{},
 	}
 
-	command := words[0]
-
-	switch command {
-	case "予報", "forecast":
-		return forecast(ctx, payload)
-	case "画像", "img", "image":
-		return searchImage(ctx, payload)
-	default:
-		return Message{
-			Channel: payload.Event.Channel,
-			Text:    fmt.Sprintf("ちょっと何言ってるかわからない\n> %v", words),
+	for _, cmd := range commands {
+		if cmd.Match(payload) {
+			return cmd.Handle(ctx, payload)
 		}
+	}
+
+	return Message{
+		Channel: payload.Event.Channel,
+		Text:    fmt.Sprintf("ちょっと何言ってるかわからない\n> %v", payload.Ext.Words),
 	}
 }

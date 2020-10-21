@@ -1,5 +1,7 @@
 package slack
 
+import "github.com/otiai10/spell"
+
 // Payload ...
 // https://api.slack.com/events/app_mention
 type Payload struct {
@@ -19,6 +21,11 @@ type Payload struct {
 	} `json:"event"`
 	// ONLY for verification.
 	Challenge string `json:"challenge"`
+
+	// Ext is an extension for amesh-bot framework
+	Ext struct {
+		Words spell.Words `json:"-"`
+	} `json:"-"`
 }
 
 // Block ...

@@ -40,7 +40,7 @@ func (cmd ForecastCommand) Handle(ctx context.Context, payload *slack.Payload) s
 
 	message := slack.Message{
 		Channel: payload.Event.Channel,
-		Text:    city,
+		Text:    res.City.Name,
 	}
 
 	// {{{ 日付で分けて、行をつくっていく
@@ -106,6 +106,7 @@ func (cmd ForecastCommand) getPlaceholderEmoji() string {
 		":marijuana:",
 		":white_small_square:",
 		":shrimp:",
+		":pig:",
 		":slack:",
 		":sunglasses:",
 	}

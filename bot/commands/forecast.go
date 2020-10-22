@@ -53,7 +53,7 @@ func (cmd ForecastCommand) Handle(ctx context.Context, payload *slack.Payload) s
 		// 新しい日付であればBlockを初期化
 		if date != blockdate {
 			message.Text += "\n"
-			message.Text += fmt.Sprintf("%d/%d ", month, date)
+			message.Text += fmt.Sprintf("%d/%d %s ", month, date, cmd.getJapaneseWeekday(t.Weekday()))
 			if t.Hour() != 0 {
 				for h := 0; h < t.Hour(); h += 3 {
 					message.Text += placeholder
@@ -104,11 +104,32 @@ func (cmd ForecastCommand) convertOpenWeatherMapIconToSlackEmoji(icon string) st
 func (cmd ForecastCommand) getPlaceholderEmoji() string {
 	candidates := []string{
 		":marijuana:",
-		":white_small_square:",
 		":shrimp:",
 		":pig:",
 		":slack:",
 		":sunglasses:",
+		":white_small_square:",
+		":white_small_square:",
+		":white_small_square:",
+		":white_small_square:",
+		":white_small_square:",
+		":white_small_square:",
+		":white_small_square:",
+		":white_small_square:",
+		":white_small_square:",
+		":white_small_square:",
 	}
 	return candidates[rand.Intn(len(candidates))]
+}
+
+func (cmd ForecastCommand) getJapaneseWeekday(day time.Weekday) string {
+	return map[time.Weekday]string{
+		time.Sunday:    "日",
+		time.Monday:    "月",
+		time.Tuesday:   "火",
+		time.Wednesday: "水",
+		time.Thursday:  "木",
+		time.Friday:    "金",
+		time.Saturday:  "土",
+	}[day]
 }

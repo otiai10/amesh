@@ -53,4 +53,5 @@ type Message struct {
 	Text    string `json:"text,omitempty"`
 	// https://api.slack.com/messaging/composing/layouts#sending-messages
 	Blocks []Block `json:"blocks,omitempty"`
+	// Markdown bool   `json:"mrkdwn"`
 }

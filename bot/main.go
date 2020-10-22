@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/otiai10/amesh/bot/commands"
 	"github.com/otiai10/amesh/bot/slack"
 	"github.com/otiai10/marmoset"
 	"gopkg.in/yaml.v2"
@@ -12,8 +13,14 @@ import (
 
 func init() {
 	router := marmoset.NewRouter()
-	router.POST("/slack/webhook", slack.HandleWebhook)
-	router.GET("/slack", slack.HandleIndex)
+	slackbot := slack.Bot{
+		Commands: []slack.Command{
+			commands.AmeshCommand{},
+			commands.ForecastCommand{},
+			commands.ImageCommand{},
+		},
+	}
+	router.POST("/slack/webhook", slackbot.ServeHTTP)
 	http.Handle("/", router)
 }
 
@@ -35,7 +42,6 @@ func main() {
 }
 
 func devLoadEnv(fname string) {
-	// AppConfig ...
 	type AppConfig struct {
 		EnvVariables map[string]string `yaml:"env_variables"`
 	}

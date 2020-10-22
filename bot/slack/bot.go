@@ -12,14 +12,19 @@ import (
 	"github.com/otiai10/spell"
 )
 
-// HandleIndex ...
-func HandleIndex(w http.ResponseWriter, r *http.Request) {
-	render := marmoset.Render(w, true)
-	render.JSON(http.StatusOK, marmoset.P{"message": "hello"})
+// Bot ...
+type Bot struct {
+	Commands []Command
 }
 
-// HandleWebhook ...
-func HandleWebhook(w http.ResponseWriter, r *http.Request) {
+// Command ...
+type Command interface {
+	Match(*Payload) bool
+	Handle(context.Context, *Payload) Message
+	Help(*Payload) Message
+}
+
+func (bot Bot) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	render := marmoset.Render(w, true)
 	payload := &Payload{}
 	if err := json.NewDecoder(r.Body).Decode(payload); err != nil {
@@ -41,20 +46,19 @@ func HandleWebhook(w http.ResponseWriter, r *http.Request) {
 
 	// https://api.slack.com/events-api#the-events-api__responding-to-events
 	render.JSON(http.StatusAccepted, marmoset.P{"message": "ok"})
-
-	go handle(context.Background(), payload)
+	go bot.handle(context.Background(), payload)
 
 	return
 }
 
-func handle(ctx context.Context, payload *Payload) {
-	message := createResponseMessage(context.Background(), payload)
+func (bot Bot) handle(ctx context.Context, payload *Payload) {
+	message := bot.createResponseMessage(context.Background(), payload)
 	if err := postMessage(message); err != nil {
 		log.Println(err)
 	}
 }
 
-func createResponseMessage(ctx context.Context, payload *Payload) (message Message) {
+func (bot Bot) createResponseMessage(ctx context.Context, payload *Payload) (message Message) {
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -67,13 +71,7 @@ func createResponseMessage(ctx context.Context, payload *Payload) (message Messa
 
 	payload.Ext.Words = spell.Parse(payload.Event.Text)[1:]
 
-	commands := []Command{
-		AmeshCommand{},
-		ImageCommand{},
-		ForecastCommand{},
-	}
-
-	for _, cmd := range commands {
+	for _, cmd := range bot.Commands {
 		if cmd.Match(payload) {
 			return cmd.Handle(ctx, payload)
 		}

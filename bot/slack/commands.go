@@ -95,27 +95,48 @@ func (cmd ForecastCommand) Match(payload *Payload) bool {
 // Handle ...
 func (cmd ForecastCommand) Handle(ctx context.Context, payload *Payload) Message {
 	client := openweathermap.New(os.Getenv("OPENWEATHERMAP_API_KEY"))
+	loc, err := time.LoadLocation("Asia/Tokyo")
+	if err != nil {
+		return Message{Channel: payload.Event.Channel, Text: err.Error()}
+	}
 	res, err := client.ByCityName("Tokyo", nil)
 	if err != nil {
-		return Message{
-			Channel: payload.Event.Channel,
-			Text:    err.Error(),
-		}
+		return Message{Channel: payload.Event.Channel, Text: err.Error()}
 	}
-	message := Message{Channel: payload.Event.Channel}
+	if len(res.Forecasts) == 0 || len(res.Forecasts[0].Weather) == 0 {
+		return Message{Channel: payload.Event.Channel, Text: "Not enough forecast entries."}
+	}
+	message := Message{
+		Channel: payload.Event.Channel,
+		Blocks:  []Block{},
+	}
+
+	// {{{ 日付で分けて、Blockを作っていく
+	var blockdate int
+	var block *Block = nil
 	for _, forecast := range res.Forecasts {
-		if len(forecast.Weather) == 0 {
-			continue
+		_, month, date := time.Unix(forecast.Timestamp, 0).In(loc).Date()
+		// 新しい日付であればBlockを初期化
+		if date != blockdate {
+			if block != nil {
+				message.Blocks = append(message.Blocks, *block)
+			}
+			block = &Block{Type: "context", Elements: []Element{{Type: "plain_text", Text: fmt.Sprintf("%d/%d", month, date)}}}
+			blockdate = date
 		}
 		w := forecast.Weather[0]
-		message.Blocks = append(message.Blocks, Block{
-			Type: "context",
-			Elements: []Element{
-				{Type: "image", ImageURL: w.IconURL(), AltText: w.Description},
-				{Type: "plain_text", Text: fmt.Sprintf("%s | %s", w.Main, w.Description)},
-			},
-		})
+		block.Elements = append(
+			block.Elements,
+			// Element{Type: "plain_text", Text: time.Unix(forecast.Timestamp, 0).In(loc).Format("15:04")},
+			Element{Type: "image", ImageURL: w.IconURL("@2x"), AltText: w.Description},
+			// Element{Type: "plain_text", Text: "|"},
+		)
 	}
+	if block != nil {
+		message.Blocks = append(message.Blocks, *block)
+	}
+	// }}}
+
 	return message
 }
 

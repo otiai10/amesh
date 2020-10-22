@@ -1,37 +1,37 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 
 	"github.com/otiai10/amesh/bot/slack"
-	"github.com/otiai10/marmoset"
 	"gopkg.in/yaml.v2"
 )
 
-func init() {
-	router := marmoset.NewRouter()
-	router.POST("/slack/webhook", slack.HandleWebhook)
-	router.GET("/slack", slack.HandleIndex)
-	http.Handle("/", router)
-}
-
 func main() {
-
-	if os.Getenv("GAE_APPLICATION") == "" {
-		devLoadEnv("./bot/app-secrets.yaml")
-	}
-
+	devLoadEnv("./bot/app-secrets.yaml")
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 		log.Printf("Defaulting to port %s", port)
 	}
-	log.Printf("Listening on port %s", port)
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
-		log.Fatal(err)
-	}
+	u, _ := url.Parse(fmt.Sprintf("http://localhost:%s", port))
+	u.Path = "/slack/webhook"
+	body := bytes.NewBuffer(nil)
+	json.NewEncoder(body).Encode(slack.Payload{
+		Token: os.Getenv("SLACK_VERIFICATION_TOKEN"),
+		Event: slack.Event{
+			Text:    "@amesh forecast",
+			Channel: "otiai10-dev",
+		},
+	})
+	_, err := http.Post(u.String(), "application/json", body)
+	fmt.Println(err)
 }
 
 func devLoadEnv(fname string) {
@@ -51,4 +51,5 @@ func devLoadEnv(fname string) {
 	for name, value := range appconfig.EnvVariables {
 		os.Setenv(name, value)
 	}
+
 }

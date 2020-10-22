@@ -50,11 +50,20 @@ func HandleWebhook(w http.ResponseWriter, r *http.Request) {
 func handle(ctx context.Context, payload *Payload) {
 	message := createResponseMessage(context.Background(), payload)
 	if err := postMessage(message); err != nil {
-		log.Fatalln(err)
+		log.Println(err)
 	}
 }
 
-func createResponseMessage(ctx context.Context, payload *Payload) Message {
+func createResponseMessage(ctx context.Context, payload *Payload) (message Message) {
+
+	defer func() {
+		if r := recover(); r != nil {
+			message = Message{
+				Channel: payload.Event.Channel,
+				Text:    fmt.Sprintf("🤪\n> %v\n```\n%v\n```", payload.Ext.Words, r),
+			}
+		}
+	}()
 
 	payload.Ext.Words = spell.Parse(payload.Event.Text)[1:]
 

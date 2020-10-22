@@ -12,13 +12,7 @@ type Payload struct {
 	ID          string   `json:"event_id"`
 	Timestamp   int64    `json:"event_time"`
 	AuthedUsers []string `json:"authed_users"`
-	Event       struct {
-		Type      string `json:"type"`
-		User      string `json:"user"`
-		Text      string `json:"text"`
-		Channel   string `json:"channel"`
-		Timestamp string `json:"event_ts"`
-	} `json:"event"`
+	Event       Event    `json:"event"`
 	// ONLY for verification.
 	Challenge string `json:"challenge"`
 
@@ -26,6 +20,15 @@ type Payload struct {
 	Ext struct {
 		Words spell.Words `json:"-"`
 	} `json:"-"`
+}
+
+// Event ...
+type Event struct {
+	Type      string `json:"type"`
+	User      string `json:"user"`
+	Text      string `json:"text"`
+	Channel   string `json:"channel"`
+	Timestamp string `json:"event_ts"`
 }
 
 // Block ...

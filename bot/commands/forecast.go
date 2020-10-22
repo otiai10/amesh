@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"os"
@@ -13,6 +14,12 @@ import (
 
 // ForecastCommand ...
 type ForecastCommand struct{}
+
+// ForecastCommandError ...
+type ForecastCommandError error
+
+// ErrorForecastNoEntry ...
+var ErrorForecastNoEntry ForecastCommandError = errors.New("十分な天気予報情報が取得できませんでした")
 
 // Match ...
 func (cmd ForecastCommand) Match(payload *slack.Payload) bool {
@@ -27,15 +34,15 @@ func (cmd ForecastCommand) Handle(ctx context.Context, payload *slack.Payload) s
 	client := openweathermap.New(os.Getenv("OPENWEATHERMAP_API_KEY"))
 	loc, err := time.LoadLocation("Asia/Tokyo")
 	if err != nil {
-		return slack.Message{Channel: payload.Event.Channel, Text: err.Error()}
+		return wrapError(payload, err)
 	}
 	city := "Tokyo"
 	res, err := client.ByCityName(city, nil)
 	if err != nil {
-		return slack.Message{Channel: payload.Event.Channel, Text: err.Error()}
+		return wrapError(payload, err)
 	}
 	if len(res.Forecasts) == 0 || len(res.Forecasts[0].Weather) == 0 {
-		return slack.Message{Channel: payload.Event.Channel, Text: "Not enough forecast entries."}
+		return wrapError(payload, ErrorForecastNoEntry)
 	}
 
 	message := slack.Message{

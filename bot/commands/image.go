@@ -2,7 +2,6 @@ package commands
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
 	"os"
 	"strings"
@@ -31,16 +30,16 @@ func (cmd ImageCommand) Handle(ctx context.Context, payload *slack.Payload) slac
 	}
 	words := payload.Ext.Words[1:]
 	if len(words) == 0 {
-		return slack.Message{Channel: payload.Event.Channel, Text: "検索語が無いです"}
+		return wrapError(payload, ErrorGoogleNoQueryGiven)
 	}
 	query := strings.Join(words, "+")
 	rand.Seed(time.Now().Unix())
 	res, err := client.SearchImage(query, 1+rand.Intn(10))
 	if err != nil {
-		return slack.Message{Channel: payload.Event.Channel, Text: fmt.Sprintf("%v\n> %v", err.Error(), words)}
+		return wrapError(payload, err)
 	}
 	if len(res.Items) == 0 {
-		return slack.Message{Channel: payload.Event.Channel, Text: fmt.Sprintf("結果はゼロでした\n> %v", words)}
+		return wrapError(payload, ErrorGoogleNotFound)
 	}
 	// TODO: ランダムにひとつ選ぶ
 	item := res.Items[0]

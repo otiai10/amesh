@@ -26,13 +26,13 @@ func (cmd AmeshCommand) Handle(ctx context.Context, payload *slack.Payload) slac
 
 	tokyo, err := time.LoadLocation("Asia/Tokyo")
 	if err != nil {
-		return wrapError(err, payload.Event.Channel)
+		return wrapError(payload, err)
 	}
 	entry := amesh.GetEntry(time.Now().In(tokyo))
 
 	client, err := storage.NewClient(ctx)
 	if err != nil {
-		return wrapError(err, payload.Event.Channel)
+		return wrapError(payload, err)
 	}
 	defer client.Close()
 
@@ -45,7 +45,7 @@ func (cmd AmeshCommand) Handle(ctx context.Context, payload *slack.Payload) slac
 
 	attrs, err := obj.Attrs(ctx)
 	if err != nil && err != storage.ErrObjectNotExist {
-		return wrapError(err, payload.Event.Channel)
+		return wrapError(payload, err)
 	}
 
 	// すでにあるのでURLだけ返す
@@ -59,20 +59,20 @@ func (cmd AmeshCommand) Handle(ctx context.Context, payload *slack.Payload) slac
 	// 画像の取得と合成
 	img, err := entry.Image(true, true)
 	if err != nil {
-		return wrapError(err, payload.Event.Channel)
+		return wrapError(payload, err)
 	}
 	buf := bytes.NewBuffer(nil)
 	if err := png.Encode(buf, img); err != nil {
-		return wrapError(err, payload.Event.Channel)
+		return wrapError(payload, err)
 	}
 
 	// GoogleStorageへのアップロード
 	writer := obj.NewWriter(ctx)
 	if _, err = writer.Write(buf.Bytes()); err != nil {
-		return wrapError(err, payload.Event.Channel)
+		return wrapError(payload, err)
 	}
 	if err = writer.Close(); err != nil {
-		return wrapError(err, payload.Event.Channel)
+		return wrapError(payload, err)
 	}
 
 	return slack.Message{

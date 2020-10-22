@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -13,6 +14,15 @@ import (
 
 // GoogleCommand ...
 type GoogleCommand struct{}
+
+// GoogleCommandError ...
+type GoogleCommandError error
+
+// ErrorGoogleNotFound ...
+var ErrorGoogleNotFound GoogleCommandError = errors.New("検索結果ゼロ件でした")
+
+// ErrorGoogleNoQueryGiven ...
+var ErrorGoogleNoQueryGiven GoogleCommandError = errors.New("検索語が指定されていません")
 
 // Match ...
 func (cmd GoogleCommand) Match(payload *slack.Payload) bool {
@@ -30,15 +40,15 @@ func (cmd GoogleCommand) Handle(ctx context.Context, payload *slack.Payload) sla
 	}
 	words := payload.Ext.Words[1:]
 	if len(words) == 0 {
-		return slack.Message{Channel: payload.Event.Channel, Text: "検索語が無いです"}
+		return wrapError(payload, ErrorGoogleNoQueryGiven)
 	}
 	query := strings.Join(words, "+")
 	res, err := client.CustomSearch(url.Values{"q": {query}, "hl": {"ja"}})
 	if err != nil {
-		return slack.Message{Channel: payload.Event.Channel, Text: fmt.Sprintf("%v\n> %v", err.Error(), words)}
+		return wrapError(payload, err)
 	}
 	if len(res.Items) == 0 {
-		return slack.Message{Channel: payload.Event.Channel, Text: fmt.Sprintf("結果はゼロでした\n> %v", words)}
+		return wrapError(payload, ErrorGoogleNotFound)
 	}
 	item := res.Items[0]
 	return slack.Message{

@@ -60,16 +60,17 @@ func (bot Bot) handle(ctx context.Context, payload *Payload) {
 
 func (bot Bot) createResponseMessage(ctx context.Context, payload *Payload) (message Message) {
 
+	payload.Ext.Words = spell.Parse(payload.Event.Text)[1:]
+
 	defer func() {
 		if r := recover(); r != nil {
 			message = Message{
 				Channel: payload.Event.Channel,
-				Text:    fmt.Sprintf("🤪\n> %v\n```\n%v\n```", payload.Ext.Words, r),
+				Text:    fmt.Sprintf("🤪\n> %v\n```\n%s\n```", payload.Ext.Words, r),
+				// Text: fmt.Sprintf("🤪\n> %v\n```\n%s\n```", payload.Ext.Words, debug.Stack()),
 			}
 		}
 	}()
-
-	payload.Ext.Words = spell.Parse(payload.Event.Text)[1:]
 
 	for _, cmd := range bot.Commands {
 		if cmd.Match(payload) {

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/otiai10/amesh/bot/slack"
 	"gopkg.in/yaml.v2"
@@ -23,11 +24,14 @@ func main() {
 	u, _ := url.Parse(fmt.Sprintf("http://localhost:%s", port))
 	u.Path = "/slack/webhook"
 	body := bytes.NewBuffer(nil)
+
+	text := strings.Join(append([]string{"@amesh"}, os.Args[1:]...), " ")
+	channel := "otiai10-dev"
 	json.NewEncoder(body).Encode(slack.Payload{
 		Token: os.Getenv("SLACK_VERIFICATION_TOKEN"),
 		Event: slack.Event{
-			Text:    "@amesh forecast",
-			Channel: "otiai10-dev",
+			Text:    text,
+			Channel: channel,
 		},
 	})
 	_, err := http.Post(u.String(), "application/json", body)

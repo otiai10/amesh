@@ -97,8 +97,8 @@ func (cmd ForecastCommand) convertOpenWeatherMapIconToSlackEmoji(icon string) st
 		"03": ":partly_sunny:",
 		"04": ":cloud:",
 		"09": ":rain_cloud:",
-		"10": ":partly_sunny_rain:",
-		"11": ":thunder_cloud_and_rain:",
+		"10": ":umbrella:",
+		"11": ":umbrella_with_rain_drops:",
 		"13": ":snowflake:",
 		"50": ":fog:",
 	}

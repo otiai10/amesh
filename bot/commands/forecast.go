@@ -109,22 +109,16 @@ func (cmd ForecastCommand) convertOpenWeatherMapIconToSlackEmoji(icon string) st
 }
 
 func (cmd ForecastCommand) getPlaceholderEmoji() string {
+	rand.Seed(time.Now().Unix())
+	if rand.Intn(50) > 1 {
+		return ":white_small_square:"
+	}
 	candidates := []string{
 		":marijuana:",
 		":shrimp:",
 		":pig:",
 		":slack:",
 		":sunglasses:",
-		":white_small_square:",
-		":white_small_square:",
-		":white_small_square:",
-		":white_small_square:",
-		":white_small_square:",
-		":white_small_square:",
-		":white_small_square:",
-		":white_small_square:",
-		":white_small_square:",
-		":white_small_square:",
 	}
 	return candidates[rand.Intn(len(candidates))]
 }

@@ -60,7 +60,7 @@ func (cmd ForecastCommand) Handle(ctx context.Context, payload *slack.Payload) s
 		// 新しい日付であればBlockを初期化
 		if date != blockdate {
 			message.Text += "\n"
-			message.Text += fmt.Sprintf("%d/%d %s ", month, date, cmd.getJapaneseWeekday(t.Weekday()))
+			message.Text += fmt.Sprintf("%02d/%02d %s ", month, date, cmd.getJapaneseWeekday(t.Weekday()))
 			if t.Hour() != 0 {
 				for h := 0; h < t.Hour(); h += 3 {
 					message.Text += placeholder

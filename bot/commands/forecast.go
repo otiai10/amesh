@@ -31,6 +31,11 @@ func (cmd ForecastCommand) Match(payload *slack.Payload) bool {
 
 // Handle ...
 func (cmd ForecastCommand) Handle(ctx context.Context, payload *slack.Payload) slack.Message {
+
+	if payload.Ext.Words.Flag("-h") {
+		return cmd.Help(payload)
+	}
+
 	client := openweathermap.New(os.Getenv("OPENWEATHERMAP_API_KEY"))
 	loc, err := time.LoadLocation("Asia/Tokyo")
 	if err != nil {
@@ -47,36 +52,16 @@ func (cmd ForecastCommand) Handle(ctx context.Context, payload *slack.Payload) s
 
 	message := slack.Message{
 		Channel: payload.Event.Channel,
-		Text:    res.City.Name,
+		Text:    res.City.Name + "\n",
 	}
 
-	// {{{ 日付で分けて、行をつくっていく
-	var blockdate int
 	placeholder := cmd.getPlaceholderEmoji()
-	for i, forecast := range res.Forecasts {
-		w := forecast.Weather[0]
-		t := time.Unix(forecast.Timestamp, 0).In(loc)
-		_, month, date := t.Date()
-		// 新しい日付であればBlockを初期化
-		if date != blockdate {
-			message.Text += "\n"
-			message.Text += fmt.Sprintf("%02d/%02d %s ", month, date, cmd.getJapaneseWeekday(t.Weekday()))
-			if t.Hour() != 0 {
-				for h := 0; h < t.Hour(); h += 3 {
-					message.Text += placeholder
-				}
-			}
-			blockdate = date
-		}
-		emoji := cmd.convertOpenWeatherMapIconToSlackEmoji(w.Icon)
-		message.Text += emoji
-		if i == len(res.Forecasts)-1 && t.Hour() != 21 {
-			for h := t.Hour() + 3; h < 24; h += 3 {
-				message.Text += placeholder
-			}
-		}
+	for _, group := range res.GroupByDate(loc) {
+		message.Text += ForecastRowBuilder{
+			Placeholder: placeholder,
+			IncludTemp:  payload.Ext.Words.Flag("-t"),
+		}.build(group) + "\n"
 	}
-	// }}}
 
 	return message
 }
@@ -85,27 +70,8 @@ func (cmd ForecastCommand) Handle(ctx context.Context, payload *slack.Payload) s
 func (cmd ForecastCommand) Help(payload *slack.Payload) slack.Message {
 	return slack.Message{
 		Channel: payload.Event.Channel,
-		Text:    "天気予報コマンド",
+		Text:    "天気予報コマンド\n```@amesh [予報|forecast] [-t|-h]```",
 	}
-}
-
-func (cmd ForecastCommand) convertOpenWeatherMapIconToSlackEmoji(icon string) string {
-	// https://openweathermap.org/weather-conditions
-	dictionary := map[string]string{
-		"01": ":sunny:",
-		"02": ":mostly_sunny:",
-		"03": ":partly_sunny:",
-		"04": ":cloud:",
-		"09": ":rain_cloud:",
-		"10": ":umbrella:",
-		"11": ":umbrella_with_rain_drops:",
-		"13": ":snowflake:",
-		"50": ":fog:",
-	}
-	if emoji, ok := dictionary[icon[:2]]; ok {
-		return emoji
-	}
-	return cmd.getPlaceholderEmoji()
 }
 
 func (cmd ForecastCommand) getPlaceholderEmoji() string {
@@ -123,7 +89,76 @@ func (cmd ForecastCommand) getPlaceholderEmoji() string {
 	return candidates[rand.Intn(len(candidates))]
 }
 
-func (cmd ForecastCommand) getJapaneseWeekday(day time.Weekday) string {
+// ForecastRowBuilder ...
+type ForecastRowBuilder struct {
+	// 日付
+	Month   time.Month
+	Date    int
+	Weekday time.Weekday
+
+	// 時間ごとの天気
+	// Weather []openweathermap.Weather
+	Head        string
+	Body        string
+	Placeholder string
+
+	// 気温
+	IncludTemp bool
+	MaxCelsius float32
+	MinCelsius float32
+}
+
+func (row ForecastRowBuilder) build(forecast []openweathermap.Forecast) string {
+	first := forecast[0]
+	last := forecast[len(forecast)-1]
+	_, month, date := first.LocalTime.Date()
+	row.Month = month
+	row.Date = date
+	row.Weekday = first.LocalTime.Weekday()
+	row.MinCelsius = first.Main.TempMin
+	row.MaxCelsius = first.Main.TempMax
+	row.Head = fmt.Sprintf("%02d/%02d %s ", row.Month, row.Date, row.getJapaneseWeekday())
+	for h := 0; h < first.LocalTime.Hour(); h += 3 {
+		row.Body += row.Placeholder
+	}
+	for _, f := range forecast {
+		row.Body += row.convertOpenWeatherMapIconToSlackEmoji(f.Weather[0].Icon)
+		if f.Main.TempMin < row.MinCelsius {
+			row.MinCelsius = f.Main.TempMin
+		}
+		if f.Main.TempMax > row.MaxCelsius {
+			row.MaxCelsius = f.Main.TempMax
+		}
+	}
+	for h := 21; h > last.LocalTime.Hour(); h -= 3 {
+		row.Body += row.Placeholder
+	}
+	if row.IncludTemp {
+		return fmt.Sprintf("%s %s %v/%v", row.Head, row.Body, row.MinCelsius, row.MaxCelsius)
+	}
+	return fmt.Sprintf("%s %s", row.Head, row.Body)
+}
+
+func (row ForecastRowBuilder) convertOpenWeatherMapIconToSlackEmoji(icon string) string {
+	// https://openweathermap.org/weather-conditions
+	dictionary := map[string]string{
+		"01": ":sunny:",
+		"02": ":mostly_sunny:",
+		"03": ":partly_sunny:",
+		"04": ":cloud:",
+		"09": ":rain_cloud:",
+		"10": ":umbrella:",
+		"11": ":umbrella_with_rain_drops:",
+		"13": ":snowflake:",
+		"50": ":fog:",
+	}
+	if emoji, ok := dictionary[icon[:2]]; ok {
+		return emoji
+	}
+	return row.Placeholder
+}
+
+func (row ForecastRowBuilder) getJapaneseWeekday() string {
 	return map[time.Weekday]string{
 		time.Sunday:    "*日*",
 		time.Monday:    "月",
@@ -132,5 +167,5 @@ func (cmd ForecastCommand) getJapaneseWeekday(day time.Weekday) string {
 		time.Thursday:  "木",
 		time.Friday:    "金",
 		time.Saturday:  "*土*",
-	}[day]
+	}[row.Weekday]
 }

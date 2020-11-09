@@ -61,6 +61,6 @@ func (cmd GoogleCommand) Handle(ctx context.Context, payload *slack.Payload) sla
 func (cmd GoogleCommand) Help(payload *slack.Payload) slack.Message {
 	return slack.Message{
 		Channel: payload.Event.Channel,
-		Text:    "Google検索コマンド",
+		Text:    "Google検索コマンド\n```@amesh [google|ggl] {検索キーワード}```",
 	}
 }

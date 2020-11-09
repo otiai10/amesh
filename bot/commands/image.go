@@ -53,6 +53,6 @@ func (cmd ImageCommand) Handle(ctx context.Context, payload *slack.Payload) slac
 func (cmd ImageCommand) Help(payload *slack.Payload) slack.Message {
 	return slack.Message{
 		Channel: payload.Event.Channel,
-		Text:    "画像検索コマンド",
+		Text:    "画像検索コマンド\n```@amesh [image|img] {検索キーワード}```",
 	}
 }

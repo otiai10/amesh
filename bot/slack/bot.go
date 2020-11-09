@@ -78,8 +78,21 @@ func (bot Bot) createResponseMessage(ctx context.Context, payload *Payload) (mes
 		}
 	}
 
+	if payload.Ext.Words.Flag("-h") || payload.Ext.Words.Flag("help") {
+		return bot.createHelpMessage(ctx, payload)
+	}
+
 	return Message{
 		Channel: payload.Event.Channel,
 		Text:    fmt.Sprintf("ちょっと何言ってるかわからない\n> %v", payload.Ext.Words),
 	}
+}
+
+func (bot Bot) createHelpMessage(ctx context.Context, payload *Payload) (message Message) {
+	message.Channel = payload.Event.Channel
+	for _, cmd := range bot.Commands {
+		message.Text += cmd.Help(payload).Text + "\n"
+	}
+	message.Text += "これ\n```@amesh [help|-h]```"
+	return message
 }

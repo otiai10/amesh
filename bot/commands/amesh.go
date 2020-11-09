@@ -86,6 +86,6 @@ func (cmd AmeshCommand) Handle(ctx context.Context, payload *slack.Payload) slac
 func (cmd AmeshCommand) Help(payload *slack.Payload) slack.Message {
 	return slack.Message{
 		Channel: payload.Event.Channel,
-		Text:    "デフォルトのアメッシュコマンド",
+		Text:    "デフォルトのアメッシュコマンド\n```@amesh```",
 	}
 }

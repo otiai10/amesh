@@ -134,7 +134,7 @@ func (row ForecastRowBuilder) build(forecast []openweathermap.Forecast) string {
 		row.Body += row.Placeholder
 	}
 	if row.IncludTemp {
-		return fmt.Sprintf("%s %s %v/%v", row.Head, row.Body, row.MinCelsius, row.MaxCelsius)
+		return fmt.Sprintf("%s [%.1f / %.1f]\n%s", row.Head, row.MinCelsius, row.MaxCelsius, row.Body)
 	}
 	return fmt.Sprintf("%s %s", row.Head, row.Body)
 }

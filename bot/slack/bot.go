@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 
 	"github.com/otiai10/marmoset"
@@ -24,7 +26,35 @@ type Command interface {
 	Help(*Payload) Message
 }
 
-func (bot Bot) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+// OAuth handles oauth request from Slack.
+func (bot Bot) OAuth(w http.ResponseWriter, r *http.Request) {
+	code := r.URL.Query().Get("code")
+	if code == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	params := url.Values{
+		"code":          {code},
+		"client_id":     {os.Getenv("SLACK_APP_CLIENT_ID")},
+		"client_secret": {os.Getenv("SLACK_APP_CLIENT_SECRET")},
+	}
+	res, err := http.Get("https://slack.com/api/oauth.access" + "?" + params.Encode())
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if res.StatusCode >= 400 {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer res.Body.Close()
+	if _, err := io.Copy(w, res.Body); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+// Webhook handles webhook request from Slack.
+func (bot Bot) Webhook(w http.ResponseWriter, r *http.Request) {
 	render := marmoset.Render(w, true)
 	payload := &Payload{}
 	if err := json.NewDecoder(r.Body).Decode(payload); err != nil {

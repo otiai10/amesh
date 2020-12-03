@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/otiai10/marmoset"
 	"github.com/otiai10/spell"
@@ -38,7 +39,13 @@ func (bot Bot) OAuth(w http.ResponseWriter, r *http.Request) {
 		"client_id":     {os.Getenv("SLACK_APP_CLIENT_ID")},
 		"client_secret": {os.Getenv("SLACK_APP_CLIENT_SECRET")},
 	}
-	res, err := http.Get("https://slack.com/api/oauth.access" + "?" + params.Encode())
+	req, err := http.NewRequest("POST", "https://slack.com/api/oauth.v2.access", strings.NewReader(params.Encode()))
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

@@ -102,11 +102,13 @@ func (bot Bot) Webhook(w http.ResponseWriter, r *http.Request) {
 func (bot Bot) handle(ctx context.Context, payload *Payload) {
 	team, err := bot.getTeam(ctx, payload)
 	if err != nil {
-		log.Fatalln(err)
+		log.Println("[ERROR]", 1001, err)
+		return
 	}
 	message := bot.createResponseMessage(context.Background(), payload)
 	if err := postMessage(message, team); err != nil {
-		log.Fatalln(err)
+		log.Println("[ERROR]", 1002, err)
+		return
 	}
 }
 
@@ -158,6 +160,9 @@ func (bot Bot) createResponseMessage(ctx context.Context, payload *Payload) (mes
 	if payload.Ext.Words.Flag("-h") || payload.Ext.Words.Flag("help") {
 		return bot.createHelpMessage(ctx, payload)
 	}
+
+	log.Println("[DEBUG]", 9001, payload.Event.Text)
+	log.Println("[DEBUG]", 9002, payload.Ext.Words)
 
 	return Message{
 		Channel: payload.Event.Channel,

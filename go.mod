@@ -3,6 +3,7 @@ module github.com/otiai10/amesh
 go 1.13
 
 require (
+	cloud.google.com/go/firestore v1.3.0
 	cloud.google.com/go/storage v1.12.0
 	github.com/otiai10/gat v0.0.0-20200721175018-b43d09aebe21
 	github.com/otiai10/goapis v0.0.9

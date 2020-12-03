@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 
+	"cloud.google.com/go/firestore"
 	"github.com/otiai10/marmoset"
 	"github.com/otiai10/spell"
 )
@@ -55,9 +55,20 @@ func (bot Bot) OAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer res.Body.Close()
-	if _, err := io.Copy(w, res.Body); err != nil {
+
+	var oauth OAuthResponse
+	if err := json.NewDecoder(res.Body).Decode(&oauth); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
+
+	if err := bot.setTeam(context.Background(), oauth); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "Success!")
 }
 
 // Webhook handles webhook request from Slack.
@@ -89,10 +100,39 @@ func (bot Bot) Webhook(w http.ResponseWriter, r *http.Request) {
 }
 
 func (bot Bot) handle(ctx context.Context, payload *Payload) {
-	message := bot.createResponseMessage(context.Background(), payload)
-	if err := postMessage(message); err != nil {
-		log.Println(err)
+	team, err := bot.getTeam(ctx, payload)
+	if err != nil {
+		log.Fatalln(err)
 	}
+	message := bot.createResponseMessage(context.Background(), payload)
+	if err := postMessage(message, team); err != nil {
+		log.Fatalln(err)
+	}
+}
+
+func (bot Bot) getTeam(ctx context.Context, payload *Payload) (*Team, error) {
+	client, err := firestore.NewClient(ctx, os.Getenv("GOOGLE_PROJECT_ID"))
+	if err != nil {
+		return nil, err
+	}
+	doc, err := client.Doc("Teams/" + payload.TeamID).Get(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var team Team
+	if err := doc.DataTo(&team); err != nil {
+		return nil, err
+	}
+	return &team, nil
+}
+
+func (bot Bot) setTeam(ctx context.Context, oauth OAuthResponse) error {
+	client, err := firestore.NewClient(ctx, os.Getenv("GOOGLE_PROJECT_ID"))
+	if err != nil {
+		return err
+	}
+	_, err = client.Doc("Teams/"+oauth.Team.ID).Set(ctx, oauth)
+	return err
 }
 
 func (bot Bot) createResponseMessage(ctx context.Context, payload *Payload) (message Message) {

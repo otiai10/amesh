@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"cloud.google.com/go/firestore"
+	"github.com/otiai10/amesh/bot/logger"
 	"github.com/otiai10/marmoset"
 	"github.com/otiai10/spell"
 )
@@ -103,17 +104,26 @@ func (bot Bot) Webhook(w http.ResponseWriter, r *http.Request) {
 }
 
 func (bot Bot) handle(ctx context.Context, payload *Payload) {
+
+	lg, err := logger.New(ctx, os.Getenv("GOOGLE_PROJECT_ID"), "amesh")
+	if err != nil {
+		log.Fatalln("logging:", err)
+	}
+	defer lg.Close()
+
 	team, err := bot.getTeam(ctx, payload)
 	if err != nil {
-		log.Println("[ERROR]", 1001, err)
+		lg.Criticalf("firestore: %v", err)
 		return
 	}
-	message := bot.createResponseMessage(context.Background(), payload)
+
+	message := bot.createResponseMessage(context.Background(), payload, lg)
 	if message == nil {
 		return
 	}
+
 	if err := postMessage(message, team); err != nil {
-		log.Println("[ERROR]", 1002, err)
+		lg.Criticalf("slack: %v", err)
 		return
 	}
 }
@@ -143,7 +153,12 @@ func (bot Bot) setTeam(ctx context.Context, oauth OAuthResponse) error {
 	return err
 }
 
-func (bot Bot) createResponseMessage(ctx context.Context, payload *Payload) (message *Message) {
+func (bot Bot) createResponseMessage(ctx context.Context, payload *Payload, lg logger.Client) (message *Message) {
+
+	lg.Debug(map[string]interface{}{
+		"raw":   payload.Event.Text,
+		"bytes": []byte(payload.Event.Text),
+	})
 
 	if !directMentionExpression.MatchString(payload.Event.Text) {
 		return nil
@@ -171,14 +186,20 @@ func (bot Bot) createResponseMessage(ctx context.Context, payload *Payload) (mes
 		return bot.createHelpMessage(ctx, payload)
 	}
 
+	lg.Debug(map[string]interface{}{
+		"case":  "command not found",
+		"raw":   payload.Event.Text,
+		"bytes": []byte(payload.Event.Text),
+	})
+
 	return &Message{
 		Channel: payload.Event.Channel,
 		Text:    fmt.Sprintf("ちょっと何言ってるかわからない\n> %v", payload.Ext.Words),
 	}
 }
 
-func (bot Bot) createHelpMessage(ctx context.Context, payload *Payload) (message *Message) {
-	message.Channel = payload.Event.Channel
+func (bot Bot) createHelpMessage(ctx context.Context, payload *Payload) *Message {
+	message := &Message{Channel: payload.Event.Channel}
 	for _, cmd := range bot.Commands {
 		message.Text += cmd.Help(payload).Text + "\n"
 	}

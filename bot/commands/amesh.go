@@ -22,7 +22,7 @@ func (cmd AmeshCommand) Match(payload *slack.Payload) bool {
 }
 
 // Handle ...
-func (cmd AmeshCommand) Handle(ctx context.Context, payload *slack.Payload) slack.Message {
+func (cmd AmeshCommand) Handle(ctx context.Context, payload *slack.Payload) *slack.Message {
 
 	tokyo, err := time.LoadLocation("Asia/Tokyo")
 	if err != nil {
@@ -50,7 +50,7 @@ func (cmd AmeshCommand) Handle(ctx context.Context, payload *slack.Payload) slac
 
 	// すでにあるのでURLだけ返す
 	if attrs != nil && attrs.Size > 0 {
-		return slack.Message{
+		return &slack.Message{
 			Channel: payload.Event.Channel,
 			Blocks:  []slack.Block{{Type: "image", ImageURL: furl, AltText: datetime}},
 		}
@@ -75,7 +75,7 @@ func (cmd AmeshCommand) Handle(ctx context.Context, payload *slack.Payload) slac
 		return wrapError(payload, err)
 	}
 
-	return slack.Message{
+	return &slack.Message{
 		Channel: payload.Event.Channel,
 		Blocks:  []slack.Block{{Type: "image", ImageURL: furl, AltText: datetime}},
 	}
@@ -83,8 +83,8 @@ func (cmd AmeshCommand) Handle(ctx context.Context, payload *slack.Payload) slac
 }
 
 // Help ...
-func (cmd AmeshCommand) Help(payload *slack.Payload) slack.Message {
-	return slack.Message{
+func (cmd AmeshCommand) Help(payload *slack.Payload) *slack.Message {
+	return &slack.Message{
 		Channel: payload.Event.Channel,
 		Text:    "デフォルトのアメッシュコマンド\n```@amesh```",
 	}

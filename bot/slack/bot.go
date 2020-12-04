@@ -8,12 +8,15 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 
 	"cloud.google.com/go/firestore"
 	"github.com/otiai10/marmoset"
 	"github.com/otiai10/spell"
 )
+
+var directMentionExpression = regexp.MustCompile("^<?@")
 
 // Bot ...
 type Bot struct {
@@ -23,8 +26,8 @@ type Bot struct {
 // Command ...
 type Command interface {
 	Match(*Payload) bool
-	Handle(context.Context, *Payload) Message
-	Help(*Payload) Message
+	Handle(context.Context, *Payload) *Message
+	Help(*Payload) *Message
 }
 
 // OAuth handles oauth request from Slack.
@@ -106,6 +109,9 @@ func (bot Bot) handle(ctx context.Context, payload *Payload) {
 		return
 	}
 	message := bot.createResponseMessage(context.Background(), payload)
+	if message == nil {
+		return
+	}
 	if err := postMessage(message, team); err != nil {
 		log.Println("[ERROR]", 1002, err)
 		return
@@ -137,13 +143,17 @@ func (bot Bot) setTeam(ctx context.Context, oauth OAuthResponse) error {
 	return err
 }
 
-func (bot Bot) createResponseMessage(ctx context.Context, payload *Payload) (message Message) {
+func (bot Bot) createResponseMessage(ctx context.Context, payload *Payload) (message *Message) {
+
+	if !directMentionExpression.MatchString(payload.Event.Text) {
+		return nil
+	}
 
 	payload.Ext.Words = spell.Parse(payload.Event.Text)[1:]
 
 	defer func() {
 		if r := recover(); r != nil {
-			message = Message{
+			message = &Message{
 				Channel: payload.Event.Channel,
 				Text:    fmt.Sprintf("🤪\n> %v\n```\n%s\n```", payload.Ext.Words, r),
 				// Text: fmt.Sprintf("🤪\n> %v\n```\n%s\n```", payload.Ext.Words, debug.Stack()),
@@ -161,16 +171,13 @@ func (bot Bot) createResponseMessage(ctx context.Context, payload *Payload) (mes
 		return bot.createHelpMessage(ctx, payload)
 	}
 
-	log.Println("[DEBUG]", 9001, payload.Event.Text)
-	log.Println("[DEBUG]", 9002, payload.Ext.Words)
-
-	return Message{
+	return &Message{
 		Channel: payload.Event.Channel,
 		Text:    fmt.Sprintf("ちょっと何言ってるかわからない\n> %v", payload.Ext.Words),
 	}
 }
 
-func (bot Bot) createHelpMessage(ctx context.Context, payload *Payload) (message Message) {
+func (bot Bot) createHelpMessage(ctx context.Context, payload *Payload) (message *Message) {
 	message.Channel = payload.Event.Channel
 	for _, cmd := range bot.Commands {
 		message.Text += cmd.Help(payload).Text + "\n"

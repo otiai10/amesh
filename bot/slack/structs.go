@@ -55,3 +55,25 @@ type Message struct {
 	Blocks []Block `json:"blocks,omitempty"`
 	// Markdown bool   `json:"mrkdwn"`
 }
+
+// OAuthResponse ...
+// https://api.slack.com/methods/oauth.v2.access#response
+type OAuthResponse struct {
+	OK         bool   `json:"ok"     firestore:"ok"`
+	AppID      string `json:"app_id" firestore:"app_id"`
+	AuthedUser struct {
+		ID string `json:"id" firestore:"id"`
+	} `json:"authed_user" firestore:"authed_user"`
+	Scope       string `json:"scope"        firestore:"scope"`
+	TokenType   string `json:"token_type"   firestore:"token_type"`
+	AccessToken string `json:"access_token" firestore:"access_token"`
+	BotUserID   string `json:"bot_user_id"  firestore:"bot_user_id"`
+	Team        struct {
+		ID   string `json:"id"   firestore:"id"`
+		Name string `json:"name" firestore:"name"`
+	} `json:"team" firestore:"team"`
+	Enterprise interface{} `json:"enterprise" firestore:"-"`
+}
+
+// Team is a wrapper of OAuthResponse to manage collection on Firestore.
+type Team OAuthResponse

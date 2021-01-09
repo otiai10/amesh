@@ -1,5 +1,6 @@
 server/app/secret.yaml
 bot/app-secrets.yaml
+bot/app-secrets.*.yaml
 vendor
 .vscode
 release

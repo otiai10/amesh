@@ -33,7 +33,7 @@ func (cmd GoogleCommand) Match(payload *slack.Payload) bool {
 }
 
 // Handle ...
-func (cmd GoogleCommand) Handle(ctx context.Context, payload *slack.Payload) slack.Message {
+func (cmd GoogleCommand) Handle(ctx context.Context, payload *slack.Payload) *slack.Message {
 	client := google.Client{
 		APIKey:               os.Getenv("GOOGLE_CUSTOMSEARCH_API_KEY"),
 		CustomSearchEngineID: os.Getenv("GOOGLE_CUSTOMSEARCH_ENGINE_ID"),
@@ -51,15 +51,15 @@ func (cmd GoogleCommand) Handle(ctx context.Context, payload *slack.Payload) sla
 		return wrapError(payload, ErrorGoogleNotFound)
 	}
 	item := res.Items[0]
-	return slack.Message{
+	return &slack.Message{
 		Channel: payload.Event.Channel,
 		Text:    fmt.Sprintf("> %v\n%s\n", words, item.Link),
 	}
 }
 
 // Help ...
-func (cmd GoogleCommand) Help(payload *slack.Payload) slack.Message {
-	return slack.Message{
+func (cmd GoogleCommand) Help(payload *slack.Payload) *slack.Message {
+	return &slack.Message{
 		Channel: payload.Event.Channel,
 		Text:    "Google検索コマンド\n```@amesh [google|ggl] {検索キーワード}```",
 	}

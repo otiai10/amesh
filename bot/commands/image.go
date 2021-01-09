@@ -23,7 +23,7 @@ func (cmd ImageCommand) Match(payload *slack.Payload) bool {
 }
 
 // Handle ...
-func (cmd ImageCommand) Handle(ctx context.Context, payload *slack.Payload) slack.Message {
+func (cmd ImageCommand) Handle(ctx context.Context, payload *slack.Payload) *slack.Message {
 	client := google.Client{
 		APIKey:               os.Getenv("GOOGLE_CUSTOMSEARCH_API_KEY"),
 		CustomSearchEngineID: os.Getenv("GOOGLE_CUSTOMSEARCH_ENGINE_ID"),
@@ -43,15 +43,15 @@ func (cmd ImageCommand) Handle(ctx context.Context, payload *slack.Payload) slac
 	}
 	// TODO: ランダムにひとつ選ぶ
 	item := res.Items[0]
-	return slack.Message{
+	return &slack.Message{
 		Channel: payload.Event.Channel,
 		Blocks:  []slack.Block{{Type: "image", ImageURL: item.Link, AltText: query}},
 	}
 }
 
 // Help ...
-func (cmd ImageCommand) Help(payload *slack.Payload) slack.Message {
-	return slack.Message{
+func (cmd ImageCommand) Help(payload *slack.Payload) *slack.Message {
+	return &slack.Message{
 		Channel: payload.Event.Channel,
 		Text:    "画像検索コマンド\n```@amesh [image|img] {検索キーワード}```",
 	}

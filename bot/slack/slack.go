@@ -5,10 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 )
 
-func postMessage(message interface{}) error {
+func postMessage(message interface{}, team *Team) error {
 	body := bytes.NewBuffer(nil)
 	if err := json.NewEncoder(body).Encode(message); err != nil {
 		return err
@@ -18,7 +17,7 @@ func postMessage(message interface{}) error {
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", os.Getenv("SLACK_BOT_USER_OAUTH_ACCESS_TOKEN")))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", team.AccessToken))
 	req.Header.Set("Content-Type", "application/json")
 
 	res, err := http.DefaultClient.Do(req)

@@ -21,7 +21,8 @@ func init() {
 			commands.GoogleCommand{},
 		},
 	}
-	router.POST("/slack/webhook", slackbot.ServeHTTP)
+	router.POST("/slack/webhook", slackbot.Webhook)
+	router.GET("/slack/oauth", slackbot.OAuth)
 	http.Handle("/", router)
 }
 

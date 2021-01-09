@@ -30,7 +30,7 @@ func (cmd ForecastCommand) Match(payload *slack.Payload) bool {
 }
 
 // Handle ...
-func (cmd ForecastCommand) Handle(ctx context.Context, payload *slack.Payload) slack.Message {
+func (cmd ForecastCommand) Handle(ctx context.Context, payload *slack.Payload) *slack.Message {
 
 	if payload.Ext.Words.Flag("-h") {
 		return cmd.Help(payload)
@@ -50,7 +50,7 @@ func (cmd ForecastCommand) Handle(ctx context.Context, payload *slack.Payload) s
 		return wrapError(payload, ErrorForecastNoEntry)
 	}
 
-	message := slack.Message{
+	message := &slack.Message{
 		Channel: payload.Event.Channel,
 		Text:    res.City.Name + "\n",
 	}
@@ -67,8 +67,8 @@ func (cmd ForecastCommand) Handle(ctx context.Context, payload *slack.Payload) s
 }
 
 // Help ...
-func (cmd ForecastCommand) Help(payload *slack.Payload) slack.Message {
-	return slack.Message{
+func (cmd ForecastCommand) Help(payload *slack.Payload) *slack.Message {
+	return &slack.Message{
 		Channel: payload.Event.Channel,
 		Text:    "天気予報コマンド\n```@amesh [予報|forecast] [-t|-h]```",
 	}

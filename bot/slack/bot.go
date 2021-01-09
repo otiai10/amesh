@@ -164,7 +164,7 @@ func (bot Bot) createResponseMessage(ctx context.Context, payload *Payload, lg l
 		return nil
 	}
 
-	payload.Ext.Words = spell.Parse(payload.Event.Text)[1:]
+	payload.Ext.Words = spell.Words(strings.Fields(payload.Event.Text)[1:])
 
 	defer func() {
 		if r := recover(); r != nil {

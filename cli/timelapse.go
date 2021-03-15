@@ -20,7 +20,16 @@ func Timelapse(r render.Renderer, minutes, delay int, loop bool) error {
 
 	fmt.Printf("直近%d分間の降雨画像を取得中", minutes)
 
-	snapshots, err := getSnapshots(time.Duration(minutes) * time.Minute)
+	now, err := getNow()
+	if err != nil {
+		return err
+	}
+
+	start := now.Add(time.Duration(-1*minutes) * time.Minute)
+	entries := amesh.GetEntries(start, now)
+
+	progress := func(i int) { fmt.Print(".") }
+	_, err = entries.GetImages(progress)
 	if err != nil {
 		return err
 	}
@@ -32,40 +41,14 @@ func Timelapse(r render.Renderer, minutes, delay int, loop bool) error {
 		fmt.Print("\033[s\033[H\033[1;32m")
 	}
 
-	length := len(snapshots)
-	for i := 0; true; i++ {
-		if i == length && !loop {
-			break
-		}
-		s := snapshots[i%length]
+	for _, entry := range entries {
 		moveCursorToTop()
-		r.Render(os.Stdout, s.Image)
-		fmt.Println(s.Time.String())
+		r.Render(os.Stdout, entry.Image)
+		fmt.Fprintln(os.Stdout, entry.Time.String())
 		time.Sleep(time.Duration(delay) * time.Millisecond)
 	}
 
 	fmt.Print("\033[0m")
 
 	return nil
-}
-
-func getSnapshots(dur time.Duration) (snapshots []snapshot, err error) {
-
-	now, err := getNow()
-	if err != nil {
-		return nil, err
-	}
-
-	sheets := int((int64(dur) / int64(5*time.Minute))) + 1
-	for i := 0; i < sheets; i++ {
-		t := now.Add(time.Duration(-5*(sheets-i)) * time.Minute)
-		entry := amesh.GetEntry(t)
-		img, err := entry.Image(true, true)
-		if err != nil {
-			return nil, err
-		}
-		snapshots = append(snapshots, snapshot{img, entry.Time})
-		fmt.Print(".")
-	}
-	return snapshots, nil
 }

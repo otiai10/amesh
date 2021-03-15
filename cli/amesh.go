@@ -17,7 +17,7 @@ func Amesh(r render.Renderer, geo, mask bool) error {
 	}
 
 	entry := amesh.GetEntry(now)
-	merged, err := entry.Image(geo, mask)
+	merged, err := entry.GetImage(geo, mask)
 	if err != nil {
 		return err
 	}

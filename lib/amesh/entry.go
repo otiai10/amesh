@@ -26,6 +26,9 @@ const (
 	defaultLocation = "Asia/Tokyo"
 )
 
+// オンメモリ固定画像キャッシュ
+var cache = map[string]image.Image{}
+
 // Entry ...
 type Entry struct {
 	URL  string    `json:"url"`
@@ -35,12 +38,13 @@ type Entry struct {
 	Time time.Time `json:"time"`
 
 	IsRainingFunc func(image.Image) (bool, error)
+	Image         *image.RGBA
 }
 
 // GetEntry ...
-func GetEntry(t time.Time) Entry {
+func GetEntry(t time.Time) *Entry {
 	t = truncateTime(t)
-	return Entry{
+	return &Entry{
 		URL:  AmeshURL,
 		Map:  getMap(),
 		Mesh: getMesh(t),
@@ -66,7 +70,7 @@ func getMesh(t time.Time) string {
 }
 
 // Image fetches image data from URL and merge them if needed.
-func (entry Entry) Image(geo, mask bool, client ...*http.Client) (*image.RGBA, error) {
+func (entry *Entry) GetImage(geo, mask bool, client ...*http.Client) (*image.RGBA, error) {
 
 	// If client not specified, use default HTTP client.
 	// This is because, for example, Google App Engine requires HTTP client with context.
@@ -99,10 +103,14 @@ func (entry Entry) Image(geo, mask bool, client ...*http.Client) (*image.RGBA, e
 		draw.Draw(merged, masklayer.Bounds(), masklayer, image.Point{0, 0}, 0)
 	}
 
+	entry.Image = merged
 	return merged, nil
 }
 
-func (entry Entry) getImageFor(imgurl string, client *http.Client) (image.Image, error) {
+func (entry *Entry) getImageFor(imgurl string, client *http.Client) (image.Image, error) {
+	if cached, ok := cache[imgurl]; ok {
+		return cached, nil
+	}
 	res, err := client.Get(imgurl)
 	if err != nil {
 		return nil, err
@@ -112,9 +120,11 @@ func (entry Entry) getImageFor(imgurl string, client *http.Client) (image.Image,
 		return nil, fmt.Errorf(res.Status)
 	}
 	img, _, err := image.Decode(res.Body)
+	cache[imgurl] = img
 	return img, err
 }
 
+/* FIXME: You ain't gonna need it
 // IsRaining ...
 func (entry *Entry) IsRaining(cliet *http.Client) (bool, error) {
 
@@ -151,3 +161,4 @@ func (entry *Entry) IsRaining(cliet *http.Client) (bool, error) {
 
 	return false, nil
 }
+*/

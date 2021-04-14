@@ -43,6 +43,9 @@ func init() {
 
 func main() {
 	renderer := render.GetDefaultRenderer()
+	if usepix {
+		renderer = &render.CellGrid{}
+	}
 	renderer.SetScale(scale)
 	subcommand := flag.Arg(0)
 	switch loc := rainnow.GetLocation(subcommand); {

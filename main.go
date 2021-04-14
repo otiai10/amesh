@@ -13,6 +13,8 @@ import (
 	"github.com/otiai10/gat/render"
 )
 
+const version = "v1.2.3"
+
 var (
 	geo, mask bool
 	usepix    bool
@@ -35,7 +37,7 @@ func init() {
 	flag.BoolVar(&usepix, "p", false, "iTermであってもピクセル画で表示")
 	flag.Float64Var(&scale, "s", 1.2, "表示拡大倍率")
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "東京アメッシュをCLIに表示するコマンドです。\n利用可能なオプション:\n")
+		fmt.Fprintf(os.Stderr, "東京アメッシュをCLIに表示するコマンドです。(%v)\n利用可能なオプション:\n", version)
 		flag.PrintDefaults()
 	}
 	flag.Parse()

@@ -44,4 +44,4 @@ amesh -p   # iTermを使っててもピクセル表示
 
 <img width="40%" src="https://user-images.githubusercontent.com/931554/44345661-e5c65a00-a4ce-11e8-96a3-a024b8651183.png" >
 
-詳しくは、 https://github.com/otiai10/amesh/tree/main/bot
+詳しくは、 https://github.com/otiai10/amesh-bot

@@ -56,7 +56,7 @@ jobs:
       run: |
         FORMULA=amesh
         VERSION=${{ env.RELEASE_TAG }}
-        SHA256=`openssl sha256 ${{ env.RELEASE_FILE }}`
+        SHA256=`openssl sha256 ${{ env.RELEASE_FILE }} | awk '{print $2}'`
         ZIP_URL="https://github.com/otiai10/amesh/releases/download/${{ env.RELEASE_TAG }}/${{ env.RELEASE_FILE }}"
         curl -XPOST \
         -u "otiai10:${{ secrets.PERSONAL_ACCESS_TOKEN }}" \

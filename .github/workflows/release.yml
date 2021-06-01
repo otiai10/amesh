@@ -48,7 +48,7 @@ jobs:
     - name: Update release artifcat
       run: |
         curl -sS -XPOST \
-          -H "Authorization: token ${{ secrets.GITHUB_ACCESS_TOKEN }}" \
+          -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
           -H "Content-Type: application/zip" \
           --data-binary @${{ env.RELEASE_FILE }} \
           "https://uploads.github.com/repos/otiai10/amesh/releases/${{ env.RELEASE_ID }}/assets?name=${{ env.RELEASE_FILE }}"

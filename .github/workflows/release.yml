@@ -52,3 +52,6 @@ jobs:
           -H "Content-Type: application/zip" \
           --data-binary @${{ env.RELEASE_FILE }} \
           "https://uploads.github.com/repos/otiai10/amesh/releases/${{ env.RELEASE_ID }}/assets?name=${{ env.RELEASE_FILE }}"
+    - name: Sha
+      run: |
+        openssl sha256 ${{ env.RELEASE_FILE }}

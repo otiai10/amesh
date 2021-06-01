@@ -52,6 +52,23 @@ jobs:
           -H "Content-Type: application/zip" \
           --data-binary @${{ env.RELEASE_FILE }} \
           "https://uploads.github.com/repos/otiai10/amesh/releases/${{ env.RELEASE_ID }}/assets?name=${{ env.RELEASE_FILE }}"
-    - name: Sha
+    - name: Trigger Formula Update
       run: |
-        openssl sha256 ${{ env.RELEASE_FILE }}
+        FORMULA=amesh
+        VERSION=${{ env.RELEASE_TAG }}
+        SHA256=`openssl sha256 ${{ env.RELEASE_FILE }}`
+        ZIP_URL="https://github.com/otiai10/amesh/releases/download/${{ env.RELEASE_TAG }}/${{ env.RELEASE_FILE }}"
+        curl -XPOST \
+        -u "otiai10:${{ secrets.PERSONAL_ACCESS_TOKEN }}" \
+        -H "Accept: application/vnd.github.everest-preview+json" \
+        -H "Content-Type: application/json" \
+        https://api.github.com/repos/otiai10/homebrew-tap/dispatches \
+        -d "{
+            \"event_type\": \"package_update\",
+            \"client_payload\": {
+              \"formula\": \"${FORMULA}\",
+              \"version\": \"${VERSION}\",
+              \"zip_url\": \"${ZIP_URL}\",
+              \"sha256\": \"${SHA256}\"
+            }
+        }"

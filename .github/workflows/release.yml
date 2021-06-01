@@ -1,0 +1,54 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+
+  release-build:
+    name: Release build
+    runs-on: macos-latest
+    env:
+      GO111MODULE: "on"
+    steps:
+    - name: Set env
+      run: echo "RELEASE_TAG=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+    - name: Set up Go 1.14
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.14
+    - name: Check out
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Get dependencies
+      run: go get -v -t -d ./...
+    - name: Build
+      run: go build -v -o amesh .
+    - name: Zip
+      id: zip-file
+      run: |
+        RELEASE_FILE="amesh-darwin.${{ env.RELEASE_TAG }}.zip"
+        zip ${RELEASE_FILE} amesh
+        echo "RELEASE_FILE=${RELEASE_FILE}" >> $GITHUB_ENV
+    - name: Create release
+      id: create-release
+      run: |
+        RELEASE_ID=$(
+          curl -sS -XPOST \
+          https://api.github.com/repos/otiai10/amesh/releases \
+          -H "Content-Type: application/json" \
+          -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          -d "{\"tag_name\": \"${{ env.RELEASE_TAG}}\", \"target_commitish\": \"${{ env.GITHUB_SHA }}\"}" \
+          | jq ".id"
+        )
+        echo "RELEASE_ID=${RELEASE_ID}" >> $GITHUB_ENV
+    - name: Update release artifcat
+      run: |
+        curl -sS -XPOST \
+          -H "Authorization: token ${{ secrets.GITHUB_ACCESS_TOKEN }}" \
+          -H "Content-Type: application/zip" \
+          --data-binary @${{ env.RELEASE_FILE }} \
+          "https://uploads.github.com/repos/otiai10/amesh/releases/${{ env.RELEASE_ID }}/assets?name=${{ env.RELEASE_FILE }}"

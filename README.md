@@ -3,6 +3,7 @@ amesh
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/otiai10/amesh.svg)](https://pkg.go.dev/github.com/otiai10/amesh)
 [![Actions Status](https://github.com/otiai10/amesh/workflows/Go/badge.svg)](https://github.com/otiai10/amesh/actions?query=workflow%3AGo)
+[![Release](https://github.com/otiai10/amesh/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/otiai10/amesh/actions/workflows/release.yml)
 [![codecov](https://codecov.io/gh/otiai10/amesh/branch/main/graph/badge.svg?token=2KSMSazCPd)](https://codecov.io/gh/otiai10/amesh)
 [![Go Report Card](https://goreportcard.com/badge/github.com/otiai10/amesh)](https://goreportcard.com/report/github.com/otiai10/amesh)
 [![GitHub tag (latest SemVer)](https://img.shields.io/github/v/tag/otiai10/amesh?sort=semver)](https://pkg.go.dev/github.com/otiai10/amesh)

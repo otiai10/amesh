@@ -9,7 +9,7 @@ import (
 	"os"
 
 	"github.com/otiai10/amesh/cli"
-	"github.com/otiai10/amesh/lib/rainnow"
+	"github.com/otiai10/amesh/lib/tenki"
 	"github.com/otiai10/gat/render"
 )
 
@@ -53,9 +53,9 @@ func main() {
 	}
 	renderer.SetScale(scale)
 	subcommand := flag.Arg(0)
-	switch loc := rainnow.GetLocation(subcommand); {
+	switch loc := tenki.GetLocation(subcommand); {
 	case loc != nil:
-		onerror(cli.Rainnow(renderer, loc))
+		onerror(cli.Tenki(renderer, loc))
 	case subcommand == "typhoon":
 		onerror(cli.Typhoon(renderer))
 	case lapse:

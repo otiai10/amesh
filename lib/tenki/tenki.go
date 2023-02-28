@@ -1,9 +1,16 @@
-package rainnow
+package tenki
 
 import (
 	"image"
 	"net/http"
 	"time"
+)
+
+const (
+	// TenkiStaticURL ...
+	TenkiStaticURL = "https://static.tenki.jp/static-images"
+	// TenkiDynamicTimestampPath ...
+	TenkiDynamicTimestampPath = "/radar/2006/01/02/15/04/00"
 )
 
 // Location ...
@@ -19,6 +26,7 @@ type Entry interface {
 
 var supported = map[string]Location{
 	"japan": Japan{},
+	"osaka": Osaka{},
 }
 
 // GetLocation ...

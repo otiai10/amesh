@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/otiai10/amesh/lib/rainnow"
+	"github.com/otiai10/amesh/lib/tenki"
 	"github.com/otiai10/gat/render"
 )
 
-// Rainnow ...
-func Rainnow(r render.Renderer, location rainnow.Location) error {
+// Tenki
+func Tenki(r render.Renderer, location tenki.Location) error {
 	entry := location.GetEntry()
 	img, err := entry.Image()
 	if err != nil {

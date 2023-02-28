@@ -1,4 +1,4 @@
-package rainnow
+package tenki
 
 import (
 	"image"
@@ -9,38 +9,36 @@ import (
 
 const (
 	// TenkiStaticURL ...
-	TenkiStaticURL = "https://static.tenki.jp/static-images"
-	// JapanEntryPath ...
-	JapanEntryPath = "/radar/2006/01/02/15/04/00/japan-detail-large.jpg"
+	OsakaEntryPath = "/pref-30-large.jpg"
 )
 
-// Japan ...
-type Japan struct{}
+// Osaka ...
+type Osaka struct{}
 
-// JapanEntry ...
-type JapanEntry struct {
+// OsakaEntry ...
+type OsakaEntry struct {
 	URL string
 }
 
 // GetEntry ...
-func (japan Japan) GetEntry() Entry {
+func (osaka Osaka) GetEntry() Entry {
 	area := "Asia/Tokyo"
 	loc, err := time.LoadLocation(area)
 	if err != nil {
 		log.Fatalf("Failed to load location `%s`", area)
 	}
 	now := truncateTime(time.Now().In(loc), 5*time.Minute)
-	return JapanEntry{
-		URL: TenkiStaticURL + now.Format(JapanEntryPath),
+	return OsakaEntry{
+		URL: TenkiStaticURL + now.Format(TenkiDynamicTimestampPath) + OsakaEntryPath,
 	}
 }
 
 // Image ...
-func (entry JapanEntry) Image(client ...*http.Client) (image.Image, error) {
+func (osaka OsakaEntry) Image(client ...*http.Client) (image.Image, error) {
 	if len(client) == 0 {
 		client = append(client, http.DefaultClient)
 	}
-	res, err := client[0].Get(entry.URL)
+	res, err := client[0].Get(osaka.URL)
 	if err != nil {
 		return nil, err
 	}
@@ -50,6 +48,6 @@ func (entry JapanEntry) Image(client ...*http.Client) (image.Image, error) {
 }
 
 // ReferenceURL ...
-func (entry JapanEntry) ReferenceURL() string {
+func (osaka OsakaEntry) ReferenceURL() string {
 	return "https://tenki.jp/"
 }

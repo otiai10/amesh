@@ -15,12 +15,12 @@ jobs:
     steps:
     - name: Set env
       run: echo "RELEASE_TAG=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
-    - name: Set up Go 1.14
-      uses: actions/setup-go@v1
+    - name: Set up Go 1.18
+      uses: actions/setup-go@v3
       with:
-        go-version: 1.14
+        go-version: 1.18
     - name: Check out
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
     - name: Get dependencies

@@ -27,7 +27,7 @@ var (
 	loop    bool
 )
 
-func init() {
+func setup() {
 	flag.BoolVar(&lapse, "a", false, "タイムラプス表示")
 	flag.IntVar(&minutes, "m", 40, "タイムラプスの取得直近時間（分）")
 	flag.IntVar(&delay, "d", 200, "タイムラプスアニメーションのfps（msec）")
@@ -44,6 +44,9 @@ func init() {
 }
 
 func main() {
+
+	setup()
+
 	renderer := render.GetDefaultRenderer()
 	if usepix {
 		renderer = &render.CellGrid{}

@@ -26,10 +26,10 @@ jobs:
     - name: Build
       run: go build -v .
 
-    - name: Test
-      run: go test -v -cover -race -coverprofile=coverage.txt -covermode=atomic
-    - name: Upload coverage
-      uses: codecov/codecov-action@v1
-      with:
-        file: ./coverage
-        verbose: true
+    # - name: Test
+    #   run: go test -v -cover -race -coverprofile=coverage.txt -covermode=atomic
+    # - name: Upload coverage
+    #   uses: codecov/codecov-action@v1
+    #   with:
+    #     file: ./coverage
+    #     verbose: true

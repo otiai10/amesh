@@ -18,17 +18,19 @@ amesh
 
 # Install
 
-```
+**Goを使う**
+```sh
 go get -u -v github.com/otiai10/amesh
 ```
 
-なんかローカルで `go get` もしたくないしバイナリも持ちたくない、というひとがいたので謎にDockerコンテナで表示させるようにしました。
-
+**Homebrewを使う**
 ```sh
-docker run -e TERM_PROGRAM --rm otiai10/amesh
-# たぶん、
-# alias amesh='docker run -e TERM_PROGRAM --rm otiai10/amesh'
-# したら幸せになれる
+brew install amesh
+```
+
+**Dockerを使う**
+```sh
+docker run -it --rm otiai10/amesh
 ```
 
 # Usage

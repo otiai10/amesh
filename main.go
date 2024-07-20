@@ -13,7 +13,7 @@ import (
 	"github.com/otiai10/gat/render"
 )
 
-const version = "v1.2.3"
+const version = "v1.4.0"
 
 var (
 	geo, mask bool

@@ -20,15 +20,15 @@ amesh
 
 **Goを使う**
 ```sh
-go get -u -v github.com/otiai10/amesh
+go install github.com/otiai10/amesh@latest
 ```
 
 **Homebrewを使う**
 ```sh
-brew install amesh
+brew install otiai10/tap/amesh
 ```
 
-**Dockerを使う**
+**Dockerで使う**
 ```sh
 docker run -it --rm otiai10/amesh
 ```

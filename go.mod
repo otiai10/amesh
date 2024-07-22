@@ -4,7 +4,7 @@ go 1.22
 
 require (
 	github.com/otiai10/gat v0.0.0-20210414142218-6cc5ed2c158d
-	github.com/otiai10/mint v1.4.1
+	github.com/otiai10/mint v1.6.3
 	github.com/otiai10/opengraph v1.1.3
 	golang.org/x/net v0.7.0
 )
